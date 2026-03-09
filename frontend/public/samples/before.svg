@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#e5e7eb"/>
+  <rect x="100" y="80" width="600" height="400" rx="20" fill="#d1d5db"/>
+  <rect x="200" y="180" width="150" height="200" rx="10" fill="#9ca3af"/>
+  <rect x="450" y="220" width="150" height="160" rx="10" fill="#9ca3af"/>
+  <circle cx="400" cy="150" r="40" fill="#9ca3af"/>
+  <text x="400" y="540" text-anchor="middle" font-family="Arial" font-size="24" fill="#6b7280">Before Renovation</text>
+</svg>

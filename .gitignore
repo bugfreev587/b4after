@@ -29,6 +29,3 @@ Thumbs.db
 # Test
 coverage/
 
-# Generated
-backend/internal/db/*.go
-!backend/internal/db/conn.go
