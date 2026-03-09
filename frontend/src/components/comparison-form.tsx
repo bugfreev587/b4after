@@ -198,7 +198,7 @@ export function ComparisonForm({
               className="mt-2"
             />
           ) : (
-            <div className="mt-2 border-2 border-dashed rounded-lg p-8 text-center text-gray-400">
+            <div className="mt-2 border-2 border-dashed border-white/10 rounded-lg p-8 text-center text-muted-foreground">
               Upload both images to see preview
             </div>
           )}

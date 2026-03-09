@@ -4,26 +4,32 @@ const FEATURES = [
   {
     title: "Interactive Slider",
     desc: "Drag to compare before and after — works on desktop and mobile.",
+    icon: "🎚️",
   },
   {
     title: "One-Click Sharing",
     desc: "Share a public link or embed the slider on any website.",
+    icon: "🔗",
   },
   {
     title: "Built-in Analytics",
     desc: "Track views, interactions, and CTA clicks in real time.",
+    icon: "📊",
   },
   {
     title: "Custom Branding",
     desc: "Add your logo, colors, and call-to-action to every comparison.",
+    icon: "🎨",
   },
   {
     title: "Video Export",
     desc: "Generate comparison videos for social media in seconds.",
+    icon: "🎬",
   },
   {
     title: "Gallery Pages",
     desc: "Group comparisons into beautiful gallery pages for your portfolio.",
+    icon: "🖼️",
   },
 ];
 
@@ -38,7 +44,7 @@ const PRICING = [
   },
   {
     name: "Pro",
-    price: "$19",
+    price: "$15",
     period: "/month",
     features: [
       "Unlimited comparisons",
@@ -52,7 +58,7 @@ const PRICING = [
   },
   {
     name: "Business",
-    price: "$49",
+    price: "$39",
     period: "/month",
     features: [
       "Everything in Pro",
@@ -89,27 +95,34 @@ export default function HomePage() {
   return (
     <div>
       {/* Hero */}
-      <section className="py-20 px-4">
+      <section className="py-24 px-4">
         <div className="max-w-5xl mx-auto text-center">
-          <h1 className="text-5xl font-bold tracking-tight mb-6">
+          <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6 text-white">
             Showcase Your Results with
             <br />
-            <span className="text-blue-600">Before & After</span> Comparisons
+            <span
+              className="bg-clip-text text-transparent"
+              style={{ backgroundImage: "var(--gradient-brand)" }}
+            >
+              Before & After
+            </span>{" "}
+            Comparisons
           </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
             Upload two photos. Get an interactive slider, shareable page, and
             social media video — in seconds.
           </p>
-          <div className="flex gap-4 justify-center mb-12">
+          <div className="flex gap-4 justify-center mb-14">
             <a
               href="/sign-up"
-              className="bg-black text-white px-6 py-3 rounded-lg text-lg font-medium hover:bg-gray-800 transition"
+              className="px-6 py-3 rounded-lg text-lg font-medium text-white transition hover:opacity-90"
+              style={{ background: "var(--gradient-brand)" }}
             >
               Get Started Free
             </a>
             <a
               href="#how-it-works"
-              className="border px-6 py-3 rounded-lg text-lg font-medium hover:bg-gray-50 transition"
+              className="border border-white/10 text-gray-300 px-6 py-3 rounded-lg text-lg font-medium hover:bg-white/5 transition"
             >
               See How It Works
             </a>
@@ -121,9 +134,9 @@ export default function HomePage() {
       </section>
 
       {/* How It Works */}
-      <section id="how-it-works" className="py-20 bg-gray-50 px-4">
+      <section id="how-it-works" className="py-20 bg-[#1A1425] px-4">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">
+          <h2 className="text-3xl font-bold text-center mb-12 text-white">
             How It Works
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -145,11 +158,16 @@ export default function HomePage() {
               },
             ].map((item) => (
               <div key={item.step} className="text-center">
-                <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4">
+                <div
+                  className="w-12 h-12 text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4"
+                  style={{ background: "var(--gradient-brand)" }}
+                >
                   {item.step}
                 </div>
-                <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
-                <p className="text-gray-600">{item.desc}</p>
+                <h3 className="text-xl font-semibold mb-2 text-white">
+                  {item.title}
+                </h3>
+                <p className="text-gray-400">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -159,12 +177,24 @@ export default function HomePage() {
       {/* Features */}
       <section className="py-20 px-4">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">Features</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <h2 className="text-3xl font-bold text-center mb-4 text-white">
+            Features
+          </h2>
+          <p className="text-gray-400 text-center mb-12 max-w-2xl mx-auto">
+            Everything you need to create, share, and track stunning before &
+            after comparisons.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {FEATURES.map((f) => (
-              <div key={f.title} className="border rounded-lg p-6">
-                <h3 className="text-lg font-semibold mb-2">{f.title}</h3>
-                <p className="text-gray-600">{f.desc}</p>
+              <div
+                key={f.title}
+                className="bg-[#1A1425] border border-white/10 rounded-xl p-6 hover:border-white/20 transition"
+              >
+                <div className="text-2xl mb-3">{f.icon}</div>
+                <h3 className="text-lg font-semibold mb-2 text-white">
+                  {f.title}
+                </h3>
+                <p className="text-gray-400 text-sm">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -172,29 +202,57 @@ export default function HomePage() {
       </section>
 
       {/* Pricing */}
-      <section className="py-20 bg-gray-50 px-4">
+      <section className="py-20 bg-[#1A1425] px-4">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">Pricing</h2>
+          <h2 className="text-3xl font-bold text-center mb-4 text-white">
+            Simple, Transparent Pricing
+          </h2>
+          <p className="text-gray-400 text-center mb-12">
+            Start free. Upgrade when you need more.
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {PRICING.map((plan) => (
               <div
                 key={plan.name}
-                className={`border rounded-lg p-8 ${
+                className={`rounded-xl p-8 ${
                   plan.highlighted
-                    ? "border-blue-600 ring-2 ring-blue-600 bg-white"
-                    : "bg-white"
+                    ? "bg-[#221C2E] ring-2 ring-transparent"
+                    : "bg-[#0F0B15] border border-white/10"
                 }`}
+                style={
+                  plan.highlighted
+                    ? {
+                        background:
+                          "linear-gradient(#221C2E, #221C2E) padding-box, var(--gradient-brand) border-box",
+                        border: "2px solid transparent",
+                        borderRadius: "0.75rem",
+                      }
+                    : undefined
+                }
               >
-                <h3 className="text-xl font-bold">{plan.name}</h3>
+                {plan.highlighted && (
+                  <div
+                    className="text-xs font-semibold text-white px-3 py-1 rounded-full w-fit mb-4"
+                    style={{ background: "var(--gradient-brand)" }}
+                  >
+                    Most Popular
+                  </div>
+                )}
+                <h3 className="text-xl font-bold text-white">{plan.name}</h3>
                 <div className="mt-4 mb-6">
-                  <span className="text-4xl font-bold">{plan.price}</span>
-                  <span className="text-gray-500">{plan.period}</span>
+                  <span className="text-4xl font-bold text-white">
+                    {plan.price}
+                  </span>
+                  <span className="text-gray-400">{plan.period}</span>
                 </div>
                 <ul className="space-y-3 mb-8">
                   {plan.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-sm">
+                    <li
+                      key={f}
+                      className="flex items-center gap-2 text-sm text-gray-300"
+                    >
                       <svg
-                        className="w-4 h-4 text-green-500 shrink-0"
+                        className="w-4 h-4 text-green-400 shrink-0"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -212,11 +270,16 @@ export default function HomePage() {
                 </ul>
                 <a
                   href="/sign-up"
-                  className={`block text-center py-2 px-4 rounded-lg font-medium transition ${
+                  className={`block text-center py-2.5 px-4 rounded-lg font-medium transition ${
                     plan.highlighted
-                      ? "bg-blue-600 text-white hover:bg-blue-700"
-                      : "border hover:bg-gray-50"
+                      ? "text-white hover:opacity-90"
+                      : "border border-white/10 text-gray-300 hover:bg-white/5"
                   }`}
+                  style={
+                    plan.highlighted
+                      ? { background: "var(--gradient-brand)" }
+                      : undefined
+                  }
                 >
                   {plan.cta}
                 </a>
@@ -229,14 +292,19 @@ export default function HomePage() {
       {/* FAQ */}
       <section className="py-20 px-4">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">FAQ</h2>
-          <div className="space-y-6">
+          <h2 className="text-3xl font-bold text-center mb-12 text-white">
+            Frequently Asked Questions
+          </h2>
+          <div className="space-y-4">
             {FAQ.map((item) => (
-              <details key={item.q} className="border rounded-lg">
-                <summary className="px-6 py-4 cursor-pointer font-medium hover:bg-gray-50">
+              <details
+                key={item.q}
+                className="border border-white/10 rounded-xl bg-[#1A1425] group"
+              >
+                <summary className="px-6 py-4 cursor-pointer font-medium text-white hover:bg-white/5 rounded-xl transition">
                   {item.q}
                 </summary>
-                <p className="px-6 pb-4 text-gray-600">{item.a}</p>
+                <p className="px-6 pb-4 text-gray-400">{item.a}</p>
               </details>
             ))}
           </div>

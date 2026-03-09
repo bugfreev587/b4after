@@ -34,11 +34,11 @@ export function PublicComparisonClient({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <div className="max-w-3xl mx-auto py-8 px-4">
-        <h1 className="text-3xl font-bold mb-2">{comp.title}</h1>
+        <h1 className="text-3xl font-bold mb-2 text-white">{comp.title}</h1>
         {comp.description && (
-          <p className="text-gray-600 mb-6">{comp.description}</p>
+          <p className="text-gray-400 mb-6">{comp.description}</p>
         )}
 
         <BeforeAfterSlider
@@ -63,9 +63,13 @@ export function PublicComparisonClient({
           </div>
         )}
 
-        <div className="mt-8 text-center text-sm text-gray-400">
+        <div className="mt-8 text-center text-sm text-gray-500">
           Powered by{" "}
-          <a href="/" className="text-blue-500 hover:underline">
+          <a
+            href="/"
+            className="bg-clip-text text-transparent hover:underline"
+            style={{ backgroundImage: "var(--gradient-brand)" }}
+          >
             BeforeAfter.io
           </a>
         </div>

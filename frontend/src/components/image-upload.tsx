@@ -58,8 +58,8 @@ export function ImageUpload({ label, value, onChange }: ImageUploadProps) {
       <div
         className={`relative border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
           dragOver
-            ? "border-blue-500 bg-blue-50"
-            : "border-gray-300 hover:border-gray-400"
+            ? "border-purple-500 bg-purple-500/10"
+            : "border-white/20 hover:border-white/30"
         }`}
         onDragOver={(e) => {
           e.preventDefault();
@@ -86,10 +86,10 @@ export function ImageUpload({ label, value, onChange }: ImageUploadProps) {
         ) : (
           <div>
             {uploading ? (
-              <p className="text-sm text-gray-500">Uploading...</p>
+              <p className="text-sm text-muted-foreground">Uploading...</p>
             ) : (
               <>
-                <p className="text-sm text-gray-500 mb-2">
+                <p className="text-sm text-muted-foreground mb-2">
                   Drag & drop an image or click to browse
                 </p>
                 <input

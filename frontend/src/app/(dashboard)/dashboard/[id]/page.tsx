@@ -81,7 +81,7 @@ export default function ComparisonDetailPage() {
     }
   };
 
-  if (loading) return <p className="text-gray-500">Loading...</p>;
+  if (loading) return <p className="text-muted-foreground">Loading...</p>;
   if (!comp) return <p>Comparison not found</p>;
 
   const publicURL = `${APP_URL}/s/${comp.slug}`;
@@ -128,7 +128,7 @@ export default function ComparisonDetailPage() {
             {analytics?.event_counts.map((ec) => (
               <Card key={ec.event_type}>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm capitalize text-gray-500">
+                  <CardTitle className="text-sm capitalize text-muted-foreground">
                     {ec.event_type.replace("_", " ")}
                   </CardTitle>
                 </CardHeader>
@@ -139,7 +139,7 @@ export default function ComparisonDetailPage() {
             ))}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-gray-500">
+                <CardTitle className="text-sm text-muted-foreground">
                   Total Views
                 </CardTitle>
               </CardHeader>

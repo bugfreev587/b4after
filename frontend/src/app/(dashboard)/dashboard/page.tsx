@@ -32,14 +32,14 @@ export default function DashboardPage() {
   }, [api]);
 
   if (loading) {
-    return <p className="text-gray-500">Loading comparisons...</p>;
+    return <p className="text-muted-foreground">Loading comparisons...</p>;
   }
 
   if (comparisons.length === 0) {
     return (
       <div className="text-center py-16">
         <h2 className="text-2xl font-bold mb-2">No comparisons yet</h2>
-        <p className="text-gray-500 mb-6">
+        <p className="text-muted-foreground mb-6">
           Create your first before & after comparison
         </p>
         <Link href="/dashboard/new" className={buttonVariants()}>
@@ -81,7 +81,7 @@ export default function DashboardPage() {
                     className="rounded aspect-square object-cover w-full"
                   />
                 </div>
-                <div className="flex items-center justify-between text-sm text-gray-500">
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
                   <span className="capitalize">{comp.category}</span>
                   <span>{comp.view_count} views</span>
                 </div>
