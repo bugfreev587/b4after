@@ -17,7 +17,7 @@ VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, user_id, name, logo_url, primary_c
 `
 
 type CreateBrandParams struct {
-	UserID         pgtype.UUID `json:"user_id"`
+	UserID         string      `json:"user_id"`
 	Name           string      `json:"name"`
 	LogoUrl        pgtype.Text `json:"logo_url"`
 	PrimaryColor   string      `json:"primary_color"`
@@ -74,7 +74,7 @@ const listBrandsByUserID = `-- name: ListBrandsByUserID :many
 SELECT id, user_id, name, logo_url, primary_color, secondary_color, website_url, created_at, updated_at FROM brands WHERE user_id = $1 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListBrandsByUserID(ctx context.Context, userID pgtype.UUID) ([]Brand, error) {
+func (q *Queries) ListBrandsByUserID(ctx context.Context, userID string) ([]Brand, error) {
 	rows, err := q.db.Query(ctx, listBrandsByUserID, userID)
 	if err != nil {
 		return nil, err

@@ -59,7 +59,7 @@ func (h *UploadHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	if ext == "" {
 		ext = ".jpg"
 	}
-	key := fmt.Sprintf("users/%s/uploads/%d%s", userID.String(), time.Now().UnixMilli(), ext)
+	key := fmt.Sprintf("users/%s/uploads/%d%s", userID, time.Now().UnixMilli(), ext)
 
 	url, err := h.r2.Upload(r.Context(), key, file, contentType)
 	if err != nil {

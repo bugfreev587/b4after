@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { api } from "@/lib/api";
+import { useApiClient } from "@/lib/api";
 
 interface ImageUploadProps {
   label: string;
@@ -16,6 +16,7 @@ export function ImageUpload({ label, value, onChange }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState("");
+  const api = useApiClient();
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -38,7 +39,7 @@ export function ImageUpload({ label, value, onChange }: ImageUploadProps) {
         setUploading(false);
       }
     },
-    [onChange],
+    [onChange, api],
   );
 
   const handleDrop = useCallback(

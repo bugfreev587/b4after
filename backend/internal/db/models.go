@@ -241,7 +241,7 @@ type Analytic struct {
 
 type Brand struct {
 	ID             pgtype.UUID        `json:"id"`
-	UserID         pgtype.UUID        `json:"user_id"`
+	UserID         string             `json:"user_id"`
 	Name           string             `json:"name"`
 	LogoUrl        pgtype.Text        `json:"logo_url"`
 	PrimaryColor   string             `json:"primary_color"`
@@ -253,7 +253,7 @@ type Brand struct {
 
 type Comparison struct {
 	ID             pgtype.UUID        `json:"id"`
-	UserID         pgtype.UUID        `json:"user_id"`
+	UserID         string             `json:"user_id"`
 	BrandID        pgtype.UUID        `json:"brand_id"`
 	Title          string             `json:"title"`
 	Description    pgtype.Text        `json:"description"`
@@ -273,7 +273,7 @@ type Comparison struct {
 
 type Gallery struct {
 	ID          pgtype.UUID        `json:"id"`
-	UserID      pgtype.UUID        `json:"user_id"`
+	UserID      string             `json:"user_id"`
 	Title       string             `json:"title"`
 	Slug        string             `json:"slug"`
 	Description pgtype.Text        `json:"description"`
@@ -290,19 +290,17 @@ type GalleryComparison struct {
 
 type TeamMember struct {
 	ID          pgtype.UUID        `json:"id"`
-	UserID      pgtype.UUID        `json:"user_id"`
-	TeamOwnerID pgtype.UUID        `json:"team_owner_id"`
+	UserID      string             `json:"user_id"`
+	TeamOwnerID string             `json:"team_owner_id"`
 	Role        TeamRole           `json:"role"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
 type User struct {
-	ID               pgtype.UUID        `json:"id"`
+	ID               string             `json:"id"`
 	Email            string             `json:"email"`
-	PasswordHash     pgtype.Text        `json:"password_hash"`
 	Name             string             `json:"name"`
 	AvatarUrl        pgtype.Text        `json:"avatar_url"`
-	GoogleID         pgtype.Text        `json:"google_id"`
 	Plan             UserPlan           `json:"plan"`
 	StripeCustomerID pgtype.Text        `json:"stripe_customer_id"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`

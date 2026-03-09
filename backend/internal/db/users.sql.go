@@ -11,46 +11,8 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createUser = `-- name: CreateUser :one
-INSERT INTO users (email, password_hash, name, google_id, avatar_url)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, email, password_hash, name, avatar_url, google_id, plan, stripe_customer_id, created_at, updated_at
-`
-
-type CreateUserParams struct {
-	Email        string      `json:"email"`
-	PasswordHash pgtype.Text `json:"password_hash"`
-	Name         string      `json:"name"`
-	GoogleID     pgtype.Text `json:"google_id"`
-	AvatarUrl    pgtype.Text `json:"avatar_url"`
-}
-
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, createUser,
-		arg.Email,
-		arg.PasswordHash,
-		arg.Name,
-		arg.GoogleID,
-		arg.AvatarUrl,
-	)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Email,
-		&i.PasswordHash,
-		&i.Name,
-		&i.AvatarUrl,
-		&i.GoogleID,
-		&i.Plan,
-		&i.StripeCustomerID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, password_hash, name, avatar_url, google_id, plan, stripe_customer_id, created_at, updated_at FROM users WHERE email = $1
+SELECT id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at FROM users WHERE email = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -59,32 +21,8 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
-		&i.PasswordHash,
 		&i.Name,
 		&i.AvatarUrl,
-		&i.GoogleID,
-		&i.Plan,
-		&i.StripeCustomerID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getUserByGoogleID = `-- name: GetUserByGoogleID :one
-SELECT id, email, password_hash, name, avatar_url, google_id, plan, stripe_customer_id, created_at, updated_at FROM users WHERE google_id = $1
-`
-
-func (q *Queries) GetUserByGoogleID(ctx context.Context, googleID pgtype.Text) (User, error) {
-	row := q.db.QueryRow(ctx, getUserByGoogleID, googleID)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Email,
-		&i.PasswordHash,
-		&i.Name,
-		&i.AvatarUrl,
-		&i.GoogleID,
 		&i.Plan,
 		&i.StripeCustomerID,
 		&i.CreatedAt,
@@ -94,19 +32,17 @@ func (q *Queries) GetUserByGoogleID(ctx context.Context, googleID pgtype.Text) (
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, password_hash, name, avatar_url, google_id, plan, stripe_customer_id, created_at, updated_at FROM users WHERE id = $1
+SELECT id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at FROM users WHERE id = $1
 `
 
-func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error) {
+func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
 	row := q.db.QueryRow(ctx, getUserByID, id)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
-		&i.PasswordHash,
 		&i.Name,
 		&i.AvatarUrl,
-		&i.GoogleID,
 		&i.Plan,
 		&i.StripeCustomerID,
 		&i.CreatedAt,
@@ -116,11 +52,11 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 }
 
 const updateUser = `-- name: UpdateUser :one
-UPDATE users SET name = $2, avatar_url = $3 WHERE id = $1 RETURNING id, email, password_hash, name, avatar_url, google_id, plan, stripe_customer_id, created_at, updated_at
+UPDATE users SET name = $2, avatar_url = $3 WHERE id = $1 RETURNING id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at
 `
 
 type UpdateUserParams struct {
-	ID        pgtype.UUID `json:"id"`
+	ID        string      `json:"id"`
 	Name      string      `json:"name"`
 	AvatarUrl pgtype.Text `json:"avatar_url"`
 }
@@ -131,10 +67,8 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
-		&i.PasswordHash,
 		&i.Name,
 		&i.AvatarUrl,
-		&i.GoogleID,
 		&i.Plan,
 		&i.StripeCustomerID,
 		&i.CreatedAt,
@@ -148,7 +82,7 @@ UPDATE users SET plan = $2, stripe_customer_id = $3 WHERE id = $1
 `
 
 type UpdateUserPlanParams struct {
-	ID               pgtype.UUID `json:"id"`
+	ID               string      `json:"id"`
 	Plan             UserPlan    `json:"plan"`
 	StripeCustomerID pgtype.Text `json:"stripe_customer_id"`
 }
@@ -156,4 +90,43 @@ type UpdateUserPlanParams struct {
 func (q *Queries) UpdateUserPlan(ctx context.Context, arg UpdateUserPlanParams) error {
 	_, err := q.db.Exec(ctx, updateUserPlan, arg.ID, arg.Plan, arg.StripeCustomerID)
 	return err
+}
+
+const upsertUser = `-- name: UpsertUser :one
+INSERT INTO users (id, email, name, avatar_url)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (id) DO UPDATE SET
+    email = EXCLUDED.email,
+    name = EXCLUDED.name,
+    avatar_url = EXCLUDED.avatar_url,
+    updated_at = now()
+RETURNING id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at
+`
+
+type UpsertUserParams struct {
+	ID        string      `json:"id"`
+	Email     string      `json:"email"`
+	Name      string      `json:"name"`
+	AvatarUrl pgtype.Text `json:"avatar_url"`
+}
+
+func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, upsertUser,
+		arg.ID,
+		arg.Email,
+		arg.Name,
+		arg.AvatarUrl,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.AvatarUrl,
+		&i.Plan,
+		&i.StripeCustomerID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

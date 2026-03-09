@@ -102,7 +102,7 @@ export default function HomePage() {
           </p>
           <div className="flex gap-4 justify-center mb-12">
             <a
-              href="/register"
+              href="/sign-up"
               className="bg-black text-white px-6 py-3 rounded-lg text-lg font-medium hover:bg-gray-800 transition"
             >
               Get Started Free
@@ -211,7 +211,7 @@ export default function HomePage() {
                   ))}
                 </ul>
                 <a
-                  href="/register"
+                  href="/sign-up"
                   className={`block text-center py-2 px-4 rounded-lg font-medium transition ${
                     plan.highlighted
                       ? "bg-blue-600 text-white hover:bg-blue-700"

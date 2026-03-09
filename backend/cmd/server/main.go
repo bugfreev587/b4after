@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/clerk/clerk-sdk-go/v2"
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -21,6 +22,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Initialize Clerk SDK
+	clerk.SetKey(cfg.ClerkSecretKey)
 
 	if err := db.RunMigrations(cfg.DatabaseURL); err != nil {
 		log.Fatal("migrations: ", err)
@@ -50,13 +54,6 @@ func main() {
 		handler.JSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
 
-	// Auth routes (public)
-	authHandler := handler.NewAuthHandler(queries, cfg)
-	r.Post("/api/auth/register", authHandler.Register)
-	r.Post("/api/auth/login", authHandler.Login)
-	r.Get("/api/auth/google", authHandler.GoogleRedirect)
-	r.Get("/api/auth/google/callback", authHandler.GoogleCallback)
-
 	// Public comparison by slug
 	compHandler := handler.NewComparisonHandler(queries)
 	r.Get("/api/comparisons/slug/{slug}", compHandler.GetBySlug)
@@ -67,9 +64,11 @@ func main() {
 
 	// Protected routes
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.AuthMiddleware(cfg.JWTSecret))
+		r.Use(middleware.ClerkAuthMiddleware(queries))
 
-		r.Get("/api/auth/me", authHandler.Me)
+		// User
+		userHandler := handler.NewUserHandler(queries)
+		r.Get("/api/users/me", userHandler.Me)
 
 		// Upload
 		if cfg.R2AccountID != "" {

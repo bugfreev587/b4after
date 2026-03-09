@@ -1,12 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { api } from "@/lib/api";
+import { useApiClient } from "@/lib/api";
 import { ComparisonForm, ComparisonFormData } from "@/components/comparison-form";
 import { toast } from "sonner";
 
 export default function NewComparisonPage() {
   const router = useRouter();
+  const api = useApiClient();
 
   const handleSubmit = async (data: ComparisonFormData) => {
     try {

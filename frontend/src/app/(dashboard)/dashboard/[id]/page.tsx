@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { api } from "@/lib/api";
+import { useApiClient } from "@/lib/api";
 import {
   ComparisonForm,
   ComparisonFormData,
@@ -31,6 +31,7 @@ const APP_URL =
 export default function ComparisonDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const api = useApiClient();
   const [comp, setComp] = useState<Comparison | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,7 +49,7 @@ export default function ComparisonDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, api]);
 
   useEffect(() => {
     fetchData();

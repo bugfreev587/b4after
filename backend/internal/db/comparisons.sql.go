@@ -18,7 +18,7 @@ RETURNING id, user_id, brand_id, title, description, slug, category, before_imag
 `
 
 type CreateComparisonParams struct {
-	UserID         pgtype.UUID        `json:"user_id"`
+	UserID         string             `json:"user_id"`
 	Title          string             `json:"title"`
 	Description    pgtype.Text        `json:"description"`
 	Slug           string             `json:"slug"`
@@ -148,7 +148,7 @@ const listComparisonsByUserID = `-- name: ListComparisonsByUserID :many
 SELECT id, user_id, brand_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, is_published, view_count, created_at, updated_at FROM comparisons WHERE user_id = $1 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListComparisonsByUserID(ctx context.Context, userID pgtype.UUID) ([]Comparison, error) {
+func (q *Queries) ListComparisonsByUserID(ctx context.Context, userID string) ([]Comparison, error) {
 	rows, err := q.db.Query(ctx, listComparisonsByUserID, userID)
 	if err != nil {
 		return nil, err

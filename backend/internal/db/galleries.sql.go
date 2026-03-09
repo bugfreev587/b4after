@@ -33,7 +33,7 @@ VALUES ($1, $2, $3, $4) RETURNING id, user_id, title, slug, description, is_publ
 `
 
 type CreateGalleryParams struct {
-	UserID      pgtype.UUID `json:"user_id"`
+	UserID      string      `json:"user_id"`
 	Title       string      `json:"title"`
 	Slug        string      `json:"slug"`
 	Description pgtype.Text `json:"description"`
@@ -129,7 +129,7 @@ const listGalleriesByUserID = `-- name: ListGalleriesByUserID :many
 SELECT id, user_id, title, slug, description, is_published, created_at, updated_at FROM galleries WHERE user_id = $1 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListGalleriesByUserID(ctx context.Context, userID pgtype.UUID) ([]Gallery, error) {
+func (q *Queries) ListGalleriesByUserID(ctx context.Context, userID string) ([]Gallery, error) {
 	rows, err := q.db.Query(ctx, listGalleriesByUserID, userID)
 	if err != nil {
 		return nil, err

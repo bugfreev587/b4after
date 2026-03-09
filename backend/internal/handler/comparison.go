@@ -63,7 +63,7 @@ func (h *ComparisonHandler) Create(w http.ResponseWriter, r *http.Request) {
 	slug := service.GenerateSlug(req.Title)
 
 	comp, err := h.queries.CreateComparison(r.Context(), db.CreateComparisonParams{
-		UserID:         pgtype.UUID{Bytes: userID, Valid: true},
+		UserID:         userID,
 		Title:          req.Title,
 		Description:    pgtype.Text{String: req.Description, Valid: req.Description != ""},
 		Slug:           slug,
@@ -90,7 +90,7 @@ func (h *ComparisonHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	comps, err := h.queries.ListComparisonsByUserID(r.Context(), pgtype.UUID{Bytes: userID, Valid: true})
+	comps, err := h.queries.ListComparisonsByUserID(r.Context(), userID)
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to list comparisons")
 		return
@@ -168,7 +168,7 @@ func (h *ComparisonHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusNotFound, "comparison not found")
 		return
 	}
-	if uuidFromPgtype(comp.UserID) != userID {
+	if comp.UserID != userID {
 		Error(w, http.StatusForbidden, "not your comparison")
 		return
 	}
@@ -219,7 +219,7 @@ func (h *ComparisonHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusNotFound, "comparison not found")
 		return
 	}
-	if uuidFromPgtype(comp.UserID) != userID {
+	if comp.UserID != userID {
 		Error(w, http.StatusForbidden, "not your comparison")
 		return
 	}
@@ -234,8 +234,8 @@ func (h *ComparisonHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 func comparisonResponse(c db.Comparison) map[string]any {
 	return map[string]any{
-		"id":               uuidFromPgtype(c.ID).String(),
-		"user_id":          uuidFromPgtype(c.UserID).String(),
+		"id":               uuidToString(c.ID),
+		"user_id":          c.UserID,
 		"title":            c.Title,
 		"description":      pgtextToPtr(c.Description),
 		"slug":             c.Slug,

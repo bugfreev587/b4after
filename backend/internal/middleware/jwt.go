@@ -3,29 +3,21 @@ package middleware
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
-	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
+	"github.com/clerk/clerk-sdk-go/v2/jwt"
+	"github.com/jackc/pgx/v5/pgtype"
+
+	"github.com/xiaoboyu/b4after/backend/internal/db"
 )
 
 type contextKey string
 
 const userIDKey contextKey = "userID"
 
-func GenerateToken(secret string, userID uuid.UUID) (string, error) {
-	claims := jwt.MapClaims{
-		"sub": userID.String(),
-		"exp": time.Now().Add(7 * 24 * time.Hour).Unix(),
-		"iat": time.Now().Unix(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(secret))
-}
-
-func AuthMiddleware(secret string) func(http.Handler) http.Handler {
+func ClerkAuthMiddleware(queries *db.Queries) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
@@ -40,25 +32,32 @@ func AuthMiddleware(secret string) func(http.Handler) http.Handler {
 				return
 			}
 
-			token, err := jwt.Parse(parts[1], func(t *jwt.Token) (any, error) {
-				return []byte(secret), nil
+			claims, err := jwt.Verify(r.Context(), &jwt.VerifyParams{
+				Token: parts[1],
 			})
-			if err != nil || !token.Valid {
+			if err != nil {
 				writeError(w, http.StatusUnauthorized, "invalid token")
 				return
 			}
 
-			claims, ok := token.Claims.(jwt.MapClaims)
-			if !ok {
-				writeError(w, http.StatusUnauthorized, "invalid token claims")
+			userID := claims.Subject
+			if userID == "" {
+				writeError(w, http.StatusUnauthorized, "invalid token: missing subject")
 				return
 			}
 
-			sub, _ := claims.GetSubject()
-			userID, err := uuid.Parse(sub)
+			// Lazy upsert: ensure user exists in DB
+			// The JWT typically doesn't include email/name directly,
+			// but we still create the user record with the Clerk user ID.
+			// User details can be synced via webhooks or the /api/users/me endpoint.
+			_, err = queries.UpsertUser(r.Context(), db.UpsertUserParams{
+				ID:        userID,
+				Email:     "",
+				Name:      "",
+				AvatarUrl: pgtype.Text{},
+			})
 			if err != nil {
-				writeError(w, http.StatusUnauthorized, "invalid user id in token")
-				return
+				log.Printf("failed to upsert user %s: %v", userID, err)
 			}
 
 			ctx := context.WithValue(r.Context(), userIDKey, userID)
@@ -67,8 +66,8 @@ func AuthMiddleware(secret string) func(http.Handler) http.Handler {
 	}
 }
 
-func GetUserIDFromContext(ctx context.Context) (uuid.UUID, bool) {
-	id, ok := ctx.Value(userIDKey).(uuid.UUID)
+func GetUserIDFromContext(ctx context.Context) (string, bool) {
+	id, ok := ctx.Value(userIDKey).(string)
 	return id, ok
 }
 

@@ -14,13 +14,13 @@ export default function MarketingLayout({
           </Link>
           <nav className="flex items-center gap-4">
             <Link
-              href="/login"
+              href="/sign-in"
               className="text-sm text-gray-600 hover:text-gray-900"
             >
               Sign in
             </Link>
             <Link
-              href="/register"
+              href="/sign-up"
               className="text-sm bg-black text-white px-4 py-2 rounded-md hover:bg-gray-800"
             >
               Get Started

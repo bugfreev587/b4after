@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { useApiClient } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -22,13 +22,14 @@ interface Comparison {
 export default function DashboardPage() {
   const [comparisons, setComparisons] = useState<Comparison[]>([]);
   const [loading, setLoading] = useState(true);
+  const api = useApiClient();
 
   useEffect(() => {
     api
       .fetch<Comparison[]>("/comparisons")
       .then(setComparisons)
       .finally(() => setLoading(false));
-  }, []);
+  }, [api]);
 
   if (loading) {
     return <p className="text-gray-500">Loading comparisons...</p>;
