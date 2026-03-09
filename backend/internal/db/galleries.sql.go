@@ -60,6 +60,35 @@ func (q *Queries) CreateGallery(ctx context.Context, arg CreateGalleryParams) (G
 	return i, err
 }
 
+const deleteGallery = `-- name: DeleteGallery :exec
+DELETE FROM galleries WHERE id = $1
+`
+
+func (q *Queries) DeleteGallery(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteGallery, id)
+	return err
+}
+
+const getGalleryByID = `-- name: GetGalleryByID :one
+SELECT id, user_id, title, slug, description, is_published, created_at, updated_at FROM galleries WHERE id = $1
+`
+
+func (q *Queries) GetGalleryByID(ctx context.Context, id pgtype.UUID) (Gallery, error) {
+	row := q.db.QueryRow(ctx, getGalleryByID, id)
+	var i Gallery
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Title,
+		&i.Slug,
+		&i.Description,
+		&i.IsPublished,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getGalleryBySlug = `-- name: GetGalleryBySlug :one
 SELECT id, user_id, title, slug, description, is_published, created_at, updated_at FROM galleries WHERE slug = $1
 `
@@ -156,4 +185,51 @@ func (q *Queries) ListGalleriesByUserID(ctx context.Context, userID string) ([]G
 		return nil, err
 	}
 	return items, nil
+}
+
+const removeComparisonFromGallery = `-- name: RemoveComparisonFromGallery :exec
+DELETE FROM gallery_comparisons WHERE gallery_id = $1 AND comparison_id = $2
+`
+
+type RemoveComparisonFromGalleryParams struct {
+	GalleryID    pgtype.UUID `json:"gallery_id"`
+	ComparisonID pgtype.UUID `json:"comparison_id"`
+}
+
+func (q *Queries) RemoveComparisonFromGallery(ctx context.Context, arg RemoveComparisonFromGalleryParams) error {
+	_, err := q.db.Exec(ctx, removeComparisonFromGallery, arg.GalleryID, arg.ComparisonID)
+	return err
+}
+
+const updateGallery = `-- name: UpdateGallery :one
+UPDATE galleries SET title = $2, description = $3, is_published = $4
+WHERE id = $1 RETURNING id, user_id, title, slug, description, is_published, created_at, updated_at
+`
+
+type UpdateGalleryParams struct {
+	ID          pgtype.UUID `json:"id"`
+	Title       string      `json:"title"`
+	Description pgtype.Text `json:"description"`
+	IsPublished bool        `json:"is_published"`
+}
+
+func (q *Queries) UpdateGallery(ctx context.Context, arg UpdateGalleryParams) (Gallery, error) {
+	row := q.db.QueryRow(ctx, updateGallery,
+		arg.ID,
+		arg.Title,
+		arg.Description,
+		arg.IsPublished,
+	)
+	var i Gallery
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Title,
+		&i.Slug,
+		&i.Description,
+		&i.IsPublished,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

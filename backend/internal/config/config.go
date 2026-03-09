@@ -19,6 +19,11 @@ type Config struct {
 	R2SecretAccessKey string
 	R2BucketName      string
 	R2PublicURL       string
+
+	StripeSecretKey          string
+	StripeWebhookSecret      string
+	StripePriceProMonthly    string
+	StripePriceBusinessMonthly string
 }
 
 func Load() (*Config, error) {
@@ -34,6 +39,11 @@ func Load() (*Config, error) {
 		R2SecretAccessKey: os.Getenv("R2_SECRET_ACCESS_KEY"),
 		R2BucketName:      getEnv("R2_BUCKET_NAME", "b4after"),
 		R2PublicURL:       os.Getenv("R2_PUBLIC_URL"),
+
+		StripeSecretKey:          os.Getenv("STRIPE_SECRET_KEY"),
+		StripeWebhookSecret:      os.Getenv("STRIPE_WEBHOOK_SECRET"),
+		StripePriceProMonthly:    os.Getenv("STRIPE_PRICE_PRO_MONTHLY"),
+		StripePriceBusinessMonthly: os.Getenv("STRIPE_PRICE_BUSINESS_MONTHLY"),
 	}
 
 	if cfg.DatabaseURL == "" {

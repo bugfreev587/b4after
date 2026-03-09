@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useApiClient } from "@/lib/api";
+import { useAuth } from "@clerk/nextjs";
 import {
   ComparisonForm,
   ComparisonFormData,
@@ -20,6 +21,10 @@ interface Comparison extends ComparisonFormData {
   view_count: number;
 }
 
+interface User {
+  plan: string;
+}
+
 interface AnalyticsSummary {
   event_counts: { event_type: string; count: number }[];
   daily_views: { date: string; count: number }[];
@@ -32,18 +37,26 @@ export default function ComparisonDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const api = useApiClient();
+  const { getToken } = useAuth();
   const [comp, setComp] = useState<Comparison | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [imageLoading, setImageLoading] = useState(false);
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoFormat, setVideoFormat] = useState("square");
 
   const fetchData = useCallback(async () => {
     try {
-      const [c, a] = await Promise.all([
+      const [c, a, u] = await Promise.all([
         api.fetch<Comparison>(`/comparisons/${id}`),
         api.fetch<AnalyticsSummary>(`/analytics/${id}`),
+        api.fetch<User>("/users/me"),
       ]);
       setComp(c);
       setAnalytics(a);
+      setUser(u);
     } catch {
       toast.error("Failed to load comparison");
     } finally {
@@ -81,8 +94,53 @@ export default function ComparisonDetailPage() {
     }
   };
 
+  const handleDownloadImage = async () => {
+    setImageLoading(true);
+    try {
+      const token = await getToken();
+      const API_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+      const res = await fetch(`${API_URL}/comparisons/${id}/image`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to generate image");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${comp?.slug}-comparison.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Image downloaded!");
+    } catch {
+      toast.error("Failed to generate image");
+    } finally {
+      setImageLoading(false);
+    }
+  };
+
+  const handleGenerateVideo = async () => {
+    setVideoLoading(true);
+    setVideoUrl(null);
+    try {
+      const result = await api.fetch<{ url: string }>(
+        `/comparisons/${id}/video?format=${videoFormat}`,
+        { method: "POST" }
+      );
+      setVideoUrl(result.url);
+      toast.success("Video generated!");
+    } catch {
+      toast.error("Failed to generate video");
+    } finally {
+      setVideoLoading(false);
+    }
+  };
+
   if (loading) return <p className="text-muted-foreground">Loading...</p>;
   if (!comp) return <p>Comparison not found</p>;
+
+  const isPro = user?.plan === "pro" || user?.plan === "business";
 
   const publicURL = `${APP_URL}/s/${comp.slug}`;
   const embedCode = `<iframe src="${APP_URL}/embed/${comp.slug}" width="100%" height="500" frameborder="0"></iframe>`;
@@ -101,6 +159,7 @@ export default function ComparisonDetailPage() {
           <TabsTrigger value="preview">Preview</TabsTrigger>
           <TabsTrigger value="edit">Edit</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="export">Export</TabsTrigger>
           <TabsTrigger value="share">Share</TabsTrigger>
         </TabsList>
 
@@ -148,6 +207,78 @@ export default function ComparisonDetailPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="export" className="mt-4 space-y-6 max-w-xl">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Download Image</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-3">
+                Download a side-by-side comparison image (PNG)
+              </p>
+              <Button onClick={handleDownloadImage} disabled={imageLoading}>
+                {imageLoading ? "Generating..." : "Download Image"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Generate Video</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {isPro ? (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Generate a comparison video with wipe transition
+                  </p>
+                  <div className="flex gap-2 items-center">
+                    <select
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={videoFormat}
+                      onChange={(e) => setVideoFormat(e.target.value)}
+                    >
+                      <option value="square">Square (1080x1080)</option>
+                      <option value="portrait">Portrait (1080x1920)</option>
+                      <option value="landscape">Landscape (1920x1080)</option>
+                    </select>
+                    <Button
+                      onClick={handleGenerateVideo}
+                      disabled={videoLoading}
+                    >
+                      {videoLoading ? "Generating..." : "Generate Video"}
+                    </Button>
+                  </div>
+                  {videoUrl && (
+                    <div className="mt-3">
+                      <a
+                        href={videoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline text-sm"
+                      >
+                        Download Video
+                      </a>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-muted-foreground mb-2">
+                    Video export requires a Pro or Business plan
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push("/dashboard/billing")}
+                  >
+                    Upgrade Plan
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="share" className="mt-4 space-y-4 max-w-xl">

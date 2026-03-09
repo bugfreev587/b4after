@@ -25,3 +25,6 @@ DELETE FROM comparisons WHERE id = $1;
 
 -- name: IncrementViewCount :exec
 UPDATE comparisons SET view_count = view_count + 1 WHERE id = $1;
+
+-- name: CountComparisonsByUserID :one
+SELECT COUNT(*) FROM comparisons WHERE user_id = $1;

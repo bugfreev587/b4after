@@ -39,6 +39,12 @@ func main() {
 
 	queries := db.New(pool)
 
+	// Optional R2 client
+	var r2 *storage.R2Client
+	if cfg.R2AccountID != "" {
+		r2 = storage.NewR2Client(cfg.R2AccountID, cfg.R2AccessKeyID, cfg.R2SecretAccessKey, cfg.R2BucketName, cfg.R2PublicURL)
+	}
+
 	r := chi.NewRouter()
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
@@ -62,6 +68,16 @@ func main() {
 	analyticsHandler := handler.NewAnalyticsHandler(queries)
 	r.Post("/api/analytics/events", analyticsHandler.RecordEvent)
 
+	// Public gallery by slug
+	galleryHandler := handler.NewGalleryHandler(queries)
+	r.Get("/api/galleries/slug/{slug}", galleryHandler.GetBySlug)
+
+	// Stripe webhook (public, verified by signature)
+	if cfg.StripeSecretKey != "" {
+		billingHandler := handler.NewBillingHandler(queries, cfg)
+		r.Post("/api/webhooks/stripe", billingHandler.HandleWebhook)
+	}
+
 	// Protected routes
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.ClerkAuthMiddleware(queries))
@@ -71,8 +87,7 @@ func main() {
 		r.Get("/api/users/me", userHandler.Me)
 
 		// Upload
-		if cfg.R2AccountID != "" {
-			r2 := storage.NewR2Client(cfg.R2AccountID, cfg.R2AccessKeyID, cfg.R2SecretAccessKey, cfg.R2BucketName, cfg.R2PublicURL)
+		if r2 != nil {
 			uploadHandler := handler.NewUploadHandler(r2)
 			r.Post("/api/upload", uploadHandler.Upload)
 		} else {
@@ -87,8 +102,43 @@ func main() {
 		r.Put("/api/comparisons/{id}", compHandler.Update)
 		r.Delete("/api/comparisons/{id}", compHandler.Delete)
 
+		// Output generation
+		outputHandler := handler.NewOutputHandler(queries, r2)
+		r.Post("/api/comparisons/{id}/image", outputHandler.GenerateImage)
+
+		// Video generation (pro/business only)
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.RequirePlan(queries, db.UserPlanPro, db.UserPlanBusiness))
+			r.Post("/api/comparisons/{id}/video", outputHandler.GenerateVideo)
+		})
+
 		// Analytics
 		r.Get("/api/analytics/{comparisonId}", analyticsHandler.GetSummary)
+
+		// Brands (pro/business only)
+		brandHandler := handler.NewBrandHandler(queries)
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.RequirePlan(queries, db.UserPlanPro, db.UserPlanBusiness))
+			r.Post("/api/brands", brandHandler.Create)
+			r.Put("/api/brands/{id}", brandHandler.Update)
+		})
+		r.Get("/api/brands", brandHandler.List)
+
+		// Galleries
+		r.Get("/api/galleries", galleryHandler.List)
+		r.Post("/api/galleries", galleryHandler.Create)
+		r.Get("/api/galleries/{id}", galleryHandler.Get)
+		r.Put("/api/galleries/{id}", galleryHandler.Update)
+		r.Delete("/api/galleries/{id}", galleryHandler.Delete)
+		r.Post("/api/galleries/{id}/comparisons", galleryHandler.AddComparison)
+		r.Delete("/api/galleries/{id}/comparisons/{compId}", galleryHandler.RemoveComparison)
+
+		// Billing
+		if cfg.StripeSecretKey != "" {
+			billingHandler := handler.NewBillingHandler(queries, cfg)
+			r.Post("/api/billing/checkout", billingHandler.CreateCheckoutSession)
+			r.Post("/api/billing/portal", billingHandler.CreatePortalSession)
+		}
 	})
 
 	log.Printf("Server starting on :%s", cfg.Port)

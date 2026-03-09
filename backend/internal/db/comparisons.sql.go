@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countComparisonsByUserID = `-- name: CountComparisonsByUserID :one
+SELECT COUNT(*) FROM comparisons WHERE user_id = $1
+`
+
+func (q *Queries) CountComparisonsByUserID(ctx context.Context, userID string) (int64, error) {
+	row := q.db.QueryRow(ctx, countComparisonsByUserID, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createComparison = `-- name: CreateComparison :one
 INSERT INTO comparisons (user_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
