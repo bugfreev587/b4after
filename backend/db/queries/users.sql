@@ -8,9 +8,9 @@ SELECT * FROM users WHERE email = $1;
 INSERT INTO users (id, email, name, avatar_url)
 VALUES ($1, $2, $3, $4)
 ON CONFLICT (id) DO UPDATE SET
-    email = EXCLUDED.email,
-    name = EXCLUDED.name,
-    avatar_url = EXCLUDED.avatar_url,
+    email = CASE WHEN EXCLUDED.email = '' THEN users.email ELSE EXCLUDED.email END,
+    name = CASE WHEN EXCLUDED.name = '' THEN users.name ELSE EXCLUDED.name END,
+    avatar_url = CASE WHEN EXCLUDED.avatar_url IS NULL THEN users.avatar_url ELSE EXCLUDED.avatar_url END,
     updated_at = now()
 RETURNING *;
 

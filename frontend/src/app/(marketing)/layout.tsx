@@ -1,10 +1,14 @@
 import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
+import { UserButton } from "@clerk/nextjs";
 
-export default function MarketingLayout({
+export default async function MarketingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { userId } = await auth();
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="bg-[#1A1425] border-b border-white/10">
@@ -13,19 +17,34 @@ export default function MarketingLayout({
             BeforeAfter.io
           </Link>
           <nav className="flex items-center gap-4">
-            <Link
-              href="/sign-in"
-              className="text-sm text-gray-300 hover:text-white transition"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/sign-up"
-              className="text-sm px-4 py-2 rounded-md font-medium text-white transition"
-              style={{ background: "var(--gradient-brand)" }}
-            >
-              Get Started
-            </Link>
+            {userId ? (
+              <>
+                <Link
+                  href="/dashboard"
+                  className="text-sm px-4 py-2 rounded-md font-medium text-white transition"
+                  style={{ background: "var(--gradient-brand)" }}
+                >
+                  Dashboard
+                </Link>
+                <UserButton />
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/sign-in"
+                  className="text-sm text-gray-300 hover:text-white transition"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/sign-up"
+                  className="text-sm px-4 py-2 rounded-md font-medium text-white transition"
+                  style={{ background: "var(--gradient-brand)" }}
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
           </nav>
         </div>
       </header>
