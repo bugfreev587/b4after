@@ -7,6 +7,7 @@ import { useAuth } from "@clerk/nextjs";
 import {
   ComparisonForm,
   ComparisonFormData,
+  ProcessImageItem,
 } from "@/components/comparison-form";
 import { BeforeAfterSlider } from "@/components/before-after-slider";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ interface Comparison extends ComparisonFormData {
   id: string;
   slug: string;
   view_count: number;
+  process_images?: ProcessImageItem[];
 }
 
 interface User {
@@ -52,6 +54,9 @@ export default function ComparisonDetailPage() {
   const [processLoading, setProcessLoading] = useState(false);
   const [processUrl, setProcessUrl] = useState<string | null>(null);
   const [processFormat, setProcessFormat] = useState("square");
+  const [multiProcessLoading, setMultiProcessLoading] = useState(false);
+  const [multiProcessUrl, setMultiProcessUrl] = useState<string | null>(null);
+  const [multiProcessFormat, setMultiProcessFormat] = useState("square");
 
   const fetchData = useCallback(async () => {
     try {
@@ -177,10 +182,28 @@ export default function ComparisonDetailPage() {
     }
   };
 
+  const handleGenerateMultiProcessVideo = async () => {
+    setMultiProcessLoading(true);
+    setMultiProcessUrl(null);
+    try {
+      const result = await api.fetch<{ url: string }>(
+        `/comparisons/${id}/multi-process-video?format=${multiProcessFormat}`,
+        { method: "POST" }
+      );
+      setMultiProcessUrl(result.url);
+      toast.success("Multi-photo process video generated!");
+    } catch {
+      toast.error("Failed to generate multi-photo process video");
+    } finally {
+      setMultiProcessLoading(false);
+    }
+  };
+
   if (loading) return <p className="text-muted-foreground">Loading...</p>;
   if (!comp) return <p>Comparison not found</p>;
 
   const isPro = user?.plan === "pro" || user?.plan === "business";
+  const hasProcessImages = (comp.process_images?.length ?? 0) >= 3;
 
   const publicURL = `${APP_URL}/s/${comp.slug}`;
   const embedCode = `<iframe src="${APP_URL}/embed/${comp.slug}" width="100%" height="500" frameborder="0"></iframe>`;
@@ -212,6 +235,35 @@ export default function ComparisonDetailPage() {
               afterLabel={comp.after_label}
             />
           </div>
+          {comp.process_images && comp.process_images.length > 0 && (
+            <div className="mt-6 max-w-2xl">
+              <h3 className="text-sm font-medium text-muted-foreground mb-3">
+                Process Photos
+              </h3>
+              <div className="flex gap-3 overflow-x-auto pb-2">
+                {comp.process_images.map((pi, idx) => (
+                  <div
+                    key={idx}
+                    className="flex-shrink-0 w-28"
+                  >
+                    <div className="aspect-square rounded-md overflow-hidden border border-white/10">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={pi.url}
+                        alt={pi.label || `Step ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    {pi.label && (
+                      <p className="text-xs text-muted-foreground mt-1 text-center truncate">
+                        {pi.label}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="edit" className="mt-4">
@@ -430,6 +482,75 @@ export default function ComparisonDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          {hasProcessImages && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">
+                  Multi-Photo Process Video
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {isPro ? (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      Generate a video from your {comp.process_images!.length}{" "}
+                      process photos with crossfade transitions and labels
+                    </p>
+                    <div className="flex gap-2 items-center">
+                      <select
+                        className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                        value={multiProcessFormat}
+                        onChange={(e) =>
+                          setMultiProcessFormat(e.target.value)
+                        }
+                      >
+                        <option value="square">Square (1080x1080)</option>
+                        <option value="portrait">
+                          Portrait (1080x1920)
+                        </option>
+                        <option value="landscape">
+                          Landscape (1920x1080)
+                        </option>
+                      </select>
+                      <Button
+                        onClick={handleGenerateMultiProcessVideo}
+                        disabled={multiProcessLoading}
+                      >
+                        {multiProcessLoading
+                          ? "Generating..."
+                          : "Generate Video"}
+                      </Button>
+                    </div>
+                    {multiProcessUrl && (
+                      <div className="mt-3">
+                        <a
+                          href={multiProcessUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary underline text-sm"
+                        >
+                          Download Multi-Photo Process Video
+                        </a>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-muted-foreground mb-2">
+                      Multi-photo process video requires a Pro or Business plan
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={() => router.push("/dashboard/billing")}
+                    >
+                      Upgrade Plan
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="share" className="mt-4 space-y-4 max-w-xl">

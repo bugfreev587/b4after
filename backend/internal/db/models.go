@@ -269,6 +269,7 @@ type Comparison struct {
 	ViewCount      int32              `json:"view_count"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	ProcessImages  []byte             `json:"process_images"`
 }
 
 type Gallery struct {

@@ -116,6 +116,7 @@ func main() {
 			r.Post("/api/comparisons/{id}/video", outputHandler.GenerateVideo)
 			r.Post("/api/comparisons/{id}/transform-video", outputHandler.GenerateTransformVideo)
 			r.Post("/api/comparisons/{id}/process-video", outputHandler.GenerateProcessVideo)
+			r.Post("/api/comparisons/{id}/multi-process-video", outputHandler.GenerateMultiPhotoProcessVideo)
 		})
 
 		// Analytics

@@ -5,10 +5,17 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/disintegration/imaging"
 	"github.com/fogleman/gg"
 )
+
+// ProcessImage represents a single image in a multi-photo process sequence.
+type ProcessImage struct {
+	URL   string `json:"url"`
+	Label string `json:"label"`
+}
 
 type VideoFormat struct {
 	Width  int
@@ -241,6 +248,122 @@ func GenerateProcessVideo(beforeURL, afterURL, beforeLabel, afterLabel, format s
 	if err != nil {
 		os.RemoveAll(tmpDir)
 		return "", fmt.Errorf("ffmpeg failed: %w\noutput: %s", err, string(output))
+	}
+
+	return outputPath, nil
+}
+
+// GenerateMultiPhotoProcessVideo creates a video from 3-10 ordered process images
+// with crossfade transitions and optional text label overlays.
+// Timing: each photo 2s display, each transition 1s crossfade.
+func GenerateMultiPhotoProcessVideo(images []ProcessImage, format string) (string, error) {
+	vf, ok := videoFormats[format]
+	if !ok {
+		vf = videoFormats["square"]
+	}
+
+	n := len(images)
+	if n < 3 || n > 10 {
+		return "", fmt.Errorf("need 3-10 images, got %d", n)
+	}
+
+	tmpDir, err := os.MkdirTemp("", "b4after-multiprocess-*")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp dir: %w", err)
+	}
+
+	// Download, resize, and save all images; draw label overlays
+	imgPaths := make([]string, n)
+	for i, pi := range images {
+		img, err := downloadImage(pi.URL)
+		if err != nil {
+			os.RemoveAll(tmpDir)
+			return "", fmt.Errorf("image %d: %w", i, err)
+		}
+		resized := imaging.Fill(img, vf.Width, vf.Height, imaging.Center, imaging.Lanczos)
+
+		path := filepath.Join(tmpDir, fmt.Sprintf("img_%02d.png", i))
+
+		if pi.Label != "" {
+			dc := gg.NewContextForImage(resized)
+			fontSize := float64(vf.Width) / 20
+			_ = dc.LoadFontFace("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", fontSize)
+
+			// Semi-transparent dark bar at bottom
+			barHeight := fontSize * 2.5
+			dc.SetRGBA(0, 0, 0, 0.6)
+			dc.DrawRectangle(0, float64(vf.Height)-barHeight, float64(vf.Width), barHeight)
+			dc.Fill()
+
+			dc.SetRGB(1, 1, 1)
+			dc.DrawStringAnchored(pi.Label, float64(vf.Width)/2, float64(vf.Height)-barHeight/2, 0.5, 0.5)
+
+			if err := dc.SavePNG(path); err != nil {
+				os.RemoveAll(tmpDir)
+				return "", fmt.Errorf("failed to save image %d: %w", i, err)
+			}
+		} else {
+			if err := imaging.Save(resized, path); err != nil {
+				os.RemoveAll(tmpDir)
+				return "", fmt.Errorf("failed to save image %d: %w", i, err)
+			}
+		}
+		imgPaths[i] = path
+	}
+
+	outputPath := filepath.Join(tmpDir, "output.mp4")
+
+	// Build FFmpeg args: each image loops for 3s (except last: 2s)
+	var args []string
+	for i, p := range imgPaths {
+		dur := "3"
+		if i == n-1 {
+			dur = "2"
+		}
+		args = append(args, "-loop", "1", "-t", dur, "-i", p)
+	}
+
+	// Build filter_complex with chained xfade transitions
+	var filterParts []string
+	scaleFmt := fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=decrease,pad=%d:%d:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30",
+		vf.Width, vf.Height, vf.Width, vf.Height)
+
+	for i := 0; i < n; i++ {
+		filterParts = append(filterParts, fmt.Sprintf("[%d:v]%s[v%d]", i, scaleFmt, i))
+	}
+
+	// Chain xfade: offset_i = i + 1
+	for i := 0; i < n-1; i++ {
+		leftLabel := fmt.Sprintf("v%d", i)
+		if i > 0 {
+			leftLabel = fmt.Sprintf("xf%d", i-1)
+		}
+		outLabel := ""
+		if i < n-2 {
+			outLabel = fmt.Sprintf("[xf%d]", i)
+		}
+		filterParts = append(filterParts,
+			fmt.Sprintf("[%s][v%d]xfade=transition=fade:duration=1:offset=%d%s",
+				leftLabel, i+1, i+1, outLabel))
+	}
+
+	filterComplex := strings.Join(filterParts, ";")
+	totalDuration := fmt.Sprintf("%d", n+1)
+
+	args = append(args,
+		"-filter_complex", filterComplex,
+		"-c:v", "libx264",
+		"-pix_fmt", "yuv420p",
+		"-t", totalDuration,
+		"-y",
+		outputPath,
+	)
+
+	cmd := exec.Command("ffmpeg", args...)
+	cmdOutput, err := cmd.CombinedOutput()
+	if err != nil {
+		os.RemoveAll(tmpDir)
+		return "", fmt.Errorf("ffmpeg failed: %w\noutput: %s", err, string(cmdOutput))
 	}
 
 	return outputPath, nil

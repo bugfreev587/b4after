@@ -15,6 +15,11 @@ import {
 import { ImageUpload } from "./image-upload";
 import { BeforeAfterSlider } from "./before-after-slider";
 
+export interface ProcessImageItem {
+  url: string;
+  label: string;
+}
+
 export interface ComparisonFormData {
   title: string;
   description: string;
@@ -26,6 +31,7 @@ export interface ComparisonFormData {
   cta_text: string;
   cta_url: string;
   is_published: boolean;
+  process_images?: ProcessImageItem[];
 }
 
 interface ComparisonFormProps {
@@ -58,8 +64,12 @@ export function ComparisonForm({
     cta_text: initial?.cta_text || "",
     cta_url: initial?.cta_url || "",
     is_published: initial?.is_published || false,
+    process_images: initial?.process_images || [],
   });
   const [loading, setLoading] = useState(false);
+  const [processOpen, setProcessOpen] = useState(
+    (initial?.process_images?.length ?? 0) > 0
+  );
 
   const update = (fields: Partial<ComparisonFormData>) =>
     setData((prev) => ({ ...prev, ...fields }));
@@ -72,6 +82,36 @@ export function ComparisonForm({
     } finally {
       setLoading(false);
     }
+  };
+
+  const processImages = data.process_images || [];
+
+  const updateProcessImage = (
+    index: number,
+    fields: Partial<ProcessImageItem>
+  ) => {
+    const updated = [...processImages];
+    updated[index] = { ...updated[index], ...fields };
+    update({ process_images: updated });
+  };
+
+  const addProcessImage = () => {
+    if (processImages.length >= 10) return;
+    update({ process_images: [...processImages, { url: "", label: "" }] });
+  };
+
+  const removeProcessImage = (index: number) => {
+    update({
+      process_images: processImages.filter((_, i) => i !== index),
+    });
+  };
+
+  const moveProcessImage = (index: number, direction: -1 | 1) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= processImages.length) return;
+    const updated = [...processImages];
+    [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
+    update({ process_images: updated });
   };
 
   return (
@@ -169,6 +209,94 @@ export function ComparisonForm({
                 placeholder="https://..."
               />
             </div>
+          </div>
+
+          {/* Process Photos Section */}
+          <div className="border border-white/10 rounded-lg">
+            <button
+              type="button"
+              className="w-full flex items-center justify-between p-4 text-left"
+              onClick={() => setProcessOpen(!processOpen)}
+            >
+              <span className="font-medium">Process Photos (Optional)</span>
+              <span className="text-muted-foreground text-sm">
+                {processOpen ? "−" : "+"}
+              </span>
+            </button>
+            {processOpen && (
+              <div className="px-4 pb-4 space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Add 3-10 ordered photos to create a multi-step process video
+                  (e.g., weekly progress, step-by-step).
+                </p>
+                {processImages.map((pi, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-2 border border-white/5 rounded-md p-3"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        disabled={idx === 0}
+                        onClick={() => moveProcessImage(idx, -1)}
+                      >
+                        ↑
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        disabled={idx === processImages.length - 1}
+                        onClick={() => moveProcessImage(idx, 1)}
+                      >
+                        ↓
+                      </Button>
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <ImageUpload
+                        label={`Photo ${idx + 1}`}
+                        value={pi.url}
+                        onChange={(url) =>
+                          updateProcessImage(idx, { url })
+                        }
+                      />
+                      <Input
+                        placeholder={`Label (e.g., "Week ${idx + 1}")`}
+                        value={pi.label}
+                        onChange={(e) =>
+                          updateProcessImage(idx, {
+                            label: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive h-8"
+                      onClick={() => removeProcessImage(idx)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+                {processImages.length < 10 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addProcessImage}
+                  >
+                    + Add Photo
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">

@@ -13,6 +13,12 @@ import (
 	"github.com/xiaoboyu/b4after/backend/internal/service"
 )
 
+// ProcessImage represents a single image in a multi-photo process sequence.
+type ProcessImage struct {
+	URL   string `json:"url"`
+	Label string `json:"label"`
+}
+
 type ComparisonHandler struct {
 	queries *db.Queries
 }
@@ -22,15 +28,16 @@ func NewComparisonHandler(queries *db.Queries) *ComparisonHandler {
 }
 
 type createComparisonRequest struct {
-	Title          string `json:"title"`
-	Description    string `json:"description"`
-	Category       string `json:"category"`
-	BeforeImageURL string `json:"before_image_url"`
-	AfterImageURL  string `json:"after_image_url"`
-	BeforeLabel    string `json:"before_label"`
-	AfterLabel     string `json:"after_label"`
-	CtaText        string `json:"cta_text"`
-	CtaURL         string `json:"cta_url"`
+	Title          string          `json:"title"`
+	Description    string          `json:"description"`
+	Category       string          `json:"category"`
+	BeforeImageURL string          `json:"before_image_url"`
+	AfterImageURL  string          `json:"after_image_url"`
+	BeforeLabel    string          `json:"before_label"`
+	AfterLabel     string          `json:"after_label"`
+	CtaText        string          `json:"cta_text"`
+	CtaURL         string          `json:"cta_url"`
+	ProcessImages  json.RawMessage `json:"process_images"`
 }
 
 func (h *ComparisonHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -74,6 +81,7 @@ func (h *ComparisonHandler) Create(w http.ResponseWriter, r *http.Request) {
 		AfterLabel:     req.AfterLabel,
 		CtaText:        pgtype.Text{String: req.CtaText, Valid: req.CtaText != ""},
 		CtaUrl:         pgtype.Text{String: req.CtaURL, Valid: req.CtaURL != ""},
+		ProcessImages:  req.ProcessImages,
 	})
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to create comparison")
@@ -142,16 +150,17 @@ func (h *ComparisonHandler) GetBySlug(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateComparisonRequest struct {
-	Title          string `json:"title"`
-	Description    string `json:"description"`
-	Category       string `json:"category"`
-	BeforeImageURL string `json:"before_image_url"`
-	AfterImageURL  string `json:"after_image_url"`
-	BeforeLabel    string `json:"before_label"`
-	AfterLabel     string `json:"after_label"`
-	CtaText        string `json:"cta_text"`
-	CtaURL         string `json:"cta_url"`
-	IsPublished    bool   `json:"is_published"`
+	Title          string          `json:"title"`
+	Description    string          `json:"description"`
+	Category       string          `json:"category"`
+	BeforeImageURL string          `json:"before_image_url"`
+	AfterImageURL  string          `json:"after_image_url"`
+	BeforeLabel    string          `json:"before_label"`
+	AfterLabel     string          `json:"after_label"`
+	CtaText        string          `json:"cta_text"`
+	CtaURL         string          `json:"cta_url"`
+	IsPublished    bool            `json:"is_published"`
+	ProcessImages  json.RawMessage `json:"process_images"`
 }
 
 func (h *ComparisonHandler) Update(w http.ResponseWriter, r *http.Request) {
@@ -197,6 +206,7 @@ func (h *ComparisonHandler) Update(w http.ResponseWriter, r *http.Request) {
 		CtaText:        pgtype.Text{String: req.CtaText, Valid: req.CtaText != ""},
 		CtaUrl:         pgtype.Text{String: req.CtaURL, Valid: req.CtaURL != ""},
 		IsPublished:    req.IsPublished,
+		ProcessImages:  req.ProcessImages,
 	})
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to update comparison")
@@ -239,7 +249,7 @@ func (h *ComparisonHandler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func comparisonResponse(c db.Comparison) map[string]any {
-	return map[string]any{
+	resp := map[string]any{
 		"id":               uuidToString(c.ID),
 		"user_id":          c.UserID,
 		"title":            c.Title,
@@ -257,4 +267,8 @@ func comparisonResponse(c db.Comparison) map[string]any {
 		"created_at":       c.CreatedAt.Time,
 		"updated_at":       c.UpdatedAt.Time,
 	}
+	if c.ProcessImages != nil {
+		resp["process_images"] = json.RawMessage(c.ProcessImages)
+	}
+	return resp
 }
