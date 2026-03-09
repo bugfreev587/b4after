@@ -97,7 +97,7 @@ export default function HomePage() {
       {/* Hero */}
       <section className="py-24 px-4">
         <div className="max-w-5xl mx-auto text-center">
-          <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6 text-white">
+          <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 text-white">
             Showcase Your Results with
             <br />
             <span
@@ -108,7 +108,7 @@ export default function HomePage() {
             </span>{" "}
             Comparisons
           </h1>
-          <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
+          <p className="text-xl md:text-2xl text-gray-400 mb-10 max-w-2xl mx-auto font-light">
             Upload two photos. Get an interactive slider, shareable page, and
             social media video — in seconds.
           </p>
@@ -136,7 +136,7 @@ export default function HomePage() {
       {/* How It Works */}
       <section id="how-it-works" className="py-20 bg-[#1A1425] px-4">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12 text-white">
+          <h2 className="text-3xl md:text-4xl font-semibold text-center mb-12 text-white">
             How It Works
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -164,7 +164,7 @@ export default function HomePage() {
                 >
                   {item.step}
                 </div>
-                <h3 className="text-xl font-semibold mb-2 text-white">
+                <h3 className="text-xl font-medium mb-2 text-white">
                   {item.title}
                 </h3>
                 <p className="text-gray-400">{item.desc}</p>
@@ -177,7 +177,7 @@ export default function HomePage() {
       {/* Features */}
       <section className="py-20 px-4">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-4 text-white">
+          <h2 className="text-3xl md:text-4xl font-semibold text-center mb-4 text-white">
             Features
           </h2>
           <p className="text-gray-400 text-center mb-12 max-w-2xl mx-auto">
@@ -191,7 +191,7 @@ export default function HomePage() {
                 className="bg-[#1A1425] border border-white/10 rounded-xl p-6 hover:border-white/20 transition"
               >
                 <div className="text-2xl mb-3">{f.icon}</div>
-                <h3 className="text-lg font-semibold mb-2 text-white">
+                <h3 className="text-lg font-medium mb-2 text-white">
                   {f.title}
                 </h3>
                 <p className="text-gray-400 text-sm">{f.desc}</p>
@@ -204,7 +204,7 @@ export default function HomePage() {
       {/* Pricing */}
       <section className="py-20 bg-[#1A1425] px-4">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-4 text-white">
+          <h2 className="text-3xl md:text-4xl font-semibold text-center mb-4 text-white">
             Simple, Transparent Pricing
           </h2>
           <p className="text-gray-400 text-center mb-12">
@@ -292,7 +292,7 @@ export default function HomePage() {
       {/* FAQ */}
       <section className="py-20 px-4">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12 text-white">
+          <h2 className="text-3xl md:text-4xl font-semibold text-center mb-12 text-white">
             Frequently Asked Questions
           </h2>
           <div className="space-y-4">
