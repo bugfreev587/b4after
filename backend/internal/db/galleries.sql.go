@@ -187,6 +187,72 @@ func (q *Queries) ListGalleriesByUserID(ctx context.Context, userID string) ([]G
 	return items, nil
 }
 
+const listGalleriesByUserIDs = `-- name: ListGalleriesByUserIDs :many
+SELECT id, user_id, title, slug, description, is_published, created_at, updated_at FROM galleries WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC
+`
+
+func (q *Queries) ListGalleriesByUserIDs(ctx context.Context, dollar_1 []string) ([]Gallery, error) {
+	rows, err := q.db.Query(ctx, listGalleriesByUserIDs, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Gallery{}
+	for rows.Next() {
+		var i Gallery
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Title,
+			&i.Slug,
+			&i.Description,
+			&i.IsPublished,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPublishedGalleriesByUserID = `-- name: ListPublishedGalleriesByUserID :many
+SELECT id, user_id, title, slug, description, is_published, created_at, updated_at FROM galleries WHERE user_id = $1 AND is_published = true ORDER BY created_at DESC
+`
+
+func (q *Queries) ListPublishedGalleriesByUserID(ctx context.Context, userID string) ([]Gallery, error) {
+	rows, err := q.db.Query(ctx, listPublishedGalleriesByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Gallery{}
+	for rows.Next() {
+		var i Gallery
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Title,
+			&i.Slug,
+			&i.Description,
+			&i.IsPublished,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const removeComparisonFromGallery = `-- name: RemoveComparisonFromGallery :exec
 DELETE FROM gallery_comparisons WHERE gallery_id = $1 AND comparison_id = $2
 `

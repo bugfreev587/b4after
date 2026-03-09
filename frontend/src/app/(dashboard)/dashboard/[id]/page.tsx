@@ -46,6 +46,12 @@ export default function ComparisonDetailPage() {
   const [videoLoading, setVideoLoading] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoFormat, setVideoFormat] = useState("square");
+  const [transformLoading, setTransformLoading] = useState(false);
+  const [transformUrl, setTransformUrl] = useState<string | null>(null);
+  const [transformFormat, setTransformFormat] = useState("square");
+  const [processLoading, setProcessLoading] = useState(false);
+  const [processUrl, setProcessUrl] = useState<string | null>(null);
+  const [processFormat, setProcessFormat] = useState("square");
 
   const fetchData = useCallback(async () => {
     try {
@@ -134,6 +140,40 @@ export default function ComparisonDetailPage() {
       toast.error("Failed to generate video");
     } finally {
       setVideoLoading(false);
+    }
+  };
+
+  const handleGenerateTransformVideo = async () => {
+    setTransformLoading(true);
+    setTransformUrl(null);
+    try {
+      const result = await api.fetch<{ url: string }>(
+        `/comparisons/${id}/transform-video?format=${transformFormat}`,
+        { method: "POST" }
+      );
+      setTransformUrl(result.url);
+      toast.success("Transform video generated!");
+    } catch {
+      toast.error("Failed to generate transform video");
+    } finally {
+      setTransformLoading(false);
+    }
+  };
+
+  const handleGenerateProcessVideo = async () => {
+    setProcessLoading(true);
+    setProcessUrl(null);
+    try {
+      const result = await api.fetch<{ url: string }>(
+        `/comparisons/${id}/process-video?format=${processFormat}`,
+        { method: "POST" }
+      );
+      setProcessUrl(result.url);
+      toast.success("Process video generated!");
+    } catch {
+      toast.error("Failed to generate process video");
+    } finally {
+      setProcessLoading(false);
     }
   };
 
@@ -268,6 +308,117 @@ export default function ComparisonDetailPage() {
                 <div className="text-center py-4">
                   <p className="text-muted-foreground mb-2">
                     Video export requires a Pro or Business plan
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push("/dashboard/billing")}
+                  >
+                    Upgrade Plan
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">AI Transform Video</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {isPro ? (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Generate a crossfade transformation video
+                  </p>
+                  <div className="flex gap-2 items-center">
+                    <select
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={transformFormat}
+                      onChange={(e) => setTransformFormat(e.target.value)}
+                    >
+                      <option value="square">Square (1080x1080)</option>
+                      <option value="portrait">Portrait (1080x1920)</option>
+                      <option value="landscape">Landscape (1920x1080)</option>
+                    </select>
+                    <Button
+                      onClick={handleGenerateTransformVideo}
+                      disabled={transformLoading}
+                    >
+                      {transformLoading ? "Generating..." : "Generate Video"}
+                    </Button>
+                  </div>
+                  {transformUrl && (
+                    <div className="mt-3">
+                      <a
+                        href={transformUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline text-sm"
+                      >
+                        Download Transform Video
+                      </a>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-muted-foreground mb-2">
+                    Transform video requires a Pro or Business plan
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push("/dashboard/billing")}
+                  >
+                    Upgrade Plan
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Process Video</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {isPro ? (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Generate a process video with title card transition
+                  </p>
+                  <div className="flex gap-2 items-center">
+                    <select
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={processFormat}
+                      onChange={(e) => setProcessFormat(e.target.value)}
+                    >
+                      <option value="square">Square (1080x1080)</option>
+                      <option value="portrait">Portrait (1080x1920)</option>
+                      <option value="landscape">Landscape (1920x1080)</option>
+                    </select>
+                    <Button
+                      onClick={handleGenerateProcessVideo}
+                      disabled={processLoading}
+                    >
+                      {processLoading ? "Generating..." : "Generate Video"}
+                    </Button>
+                  </div>
+                  {processUrl && (
+                    <div className="mt-3">
+                      <a
+                        href={processUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline text-sm"
+                      >
+                        Download Process Video
+                      </a>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-muted-foreground mb-2">
+                    Process video requires a Pro or Business plan
                   </p>
                   <Button
                     variant="outline"

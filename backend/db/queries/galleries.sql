@@ -30,3 +30,9 @@ ORDER BY gc.sort_order;
 
 -- name: RemoveComparisonFromGallery :exec
 DELETE FROM gallery_comparisons WHERE gallery_id = $1 AND comparison_id = $2;
+
+-- name: ListGalleriesByUserIDs :many
+SELECT * FROM galleries WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC;
+
+-- name: ListPublishedGalleriesByUserID :many
+SELECT * FROM galleries WHERE user_id = $1 AND is_published = true ORDER BY created_at DESC;

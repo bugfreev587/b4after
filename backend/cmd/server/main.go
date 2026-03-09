@@ -72,6 +72,10 @@ func main() {
 	galleryHandler := handler.NewGalleryHandler(queries)
 	r.Get("/api/galleries/slug/{slug}", galleryHandler.GetBySlug)
 
+	// Public subdomain page
+	subdomainHandler := handler.NewSubdomainHandler(queries, cfg)
+	r.Get("/api/subdomain/{subdomain}", subdomainHandler.GetPublicPage)
+
 	// Stripe webhook (public, verified by signature)
 	if cfg.StripeSecretKey != "" {
 		billingHandler := handler.NewBillingHandler(queries, cfg)
@@ -110,6 +114,8 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.RequirePlan(queries, db.UserPlanPro, db.UserPlanBusiness))
 			r.Post("/api/comparisons/{id}/video", outputHandler.GenerateVideo)
+			r.Post("/api/comparisons/{id}/transform-video", outputHandler.GenerateTransformVideo)
+			r.Post("/api/comparisons/{id}/process-video", outputHandler.GenerateProcessVideo)
 		})
 
 		// Analytics
@@ -132,6 +138,24 @@ func main() {
 		r.Delete("/api/galleries/{id}", galleryHandler.Delete)
 		r.Post("/api/galleries/{id}/comparisons", galleryHandler.AddComparison)
 		r.Delete("/api/galleries/{id}/comparisons/{compId}", galleryHandler.RemoveComparison)
+
+		// Teams (business only)
+		teamHandler := handler.NewTeamHandler(queries)
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.RequirePlan(queries, db.UserPlanBusiness))
+			r.Post("/api/team/members", teamHandler.InviteMember)
+			r.Get("/api/team/members", teamHandler.ListMembers)
+			r.Put("/api/team/members/{id}", teamHandler.UpdateMember)
+			r.Delete("/api/team/members/{id}", teamHandler.RemoveMember)
+			r.Get("/api/team/memberships", teamHandler.ListMemberships)
+		})
+
+		// Subdomain settings (business only)
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.RequirePlan(queries, db.UserPlanBusiness))
+			r.Get("/api/settings/subdomain", subdomainHandler.Get)
+			r.Post("/api/settings/subdomain", subdomainHandler.Update)
+		})
 
 		// Billing
 		if cfg.StripeSecretKey != "" {

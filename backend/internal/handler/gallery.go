@@ -66,7 +66,13 @@ func (h *GalleryHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	galleries, err := h.queries.ListGalleriesByUserID(r.Context(), userID)
+	userIDs, err := middleware.GetAccessibleUserIDs(r.Context(), h.queries, userID)
+	if err != nil {
+		Error(w, http.StatusInternalServerError, "failed to get accessible users")
+		return
+	}
+
+	galleries, err := h.queries.ListGalleriesByUserIDs(r.Context(), userIDs)
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to list galleries")
 		return
@@ -134,7 +140,7 @@ func (h *GalleryHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusNotFound, "gallery not found")
 		return
 	}
-	if gallery.UserID != userID {
+	if !middleware.CanAccessResource(r.Context(), h.queries, userID, gallery.UserID) {
 		Error(w, http.StatusForbidden, "not your gallery")
 		return
 	}
@@ -178,7 +184,7 @@ func (h *GalleryHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusNotFound, "gallery not found")
 		return
 	}
-	if gallery.UserID != userID {
+	if !middleware.CanAccessResource(r.Context(), h.queries, userID, gallery.UserID) {
 		Error(w, http.StatusForbidden, "not your gallery")
 		return
 	}

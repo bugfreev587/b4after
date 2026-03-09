@@ -197,6 +197,90 @@ func (q *Queries) ListComparisonsByUserID(ctx context.Context, userID string) ([
 	return items, nil
 }
 
+const listComparisonsByUserIDs = `-- name: ListComparisonsByUserIDs :many
+SELECT id, user_id, brand_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, is_published, view_count, created_at, updated_at FROM comparisons WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC
+`
+
+func (q *Queries) ListComparisonsByUserIDs(ctx context.Context, dollar_1 []string) ([]Comparison, error) {
+	rows, err := q.db.Query(ctx, listComparisonsByUserIDs, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Comparison{}
+	for rows.Next() {
+		var i Comparison
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.BrandID,
+			&i.Title,
+			&i.Description,
+			&i.Slug,
+			&i.Category,
+			&i.BeforeImageUrl,
+			&i.AfterImageUrl,
+			&i.BeforeLabel,
+			&i.AfterLabel,
+			&i.CtaText,
+			&i.CtaUrl,
+			&i.IsPublished,
+			&i.ViewCount,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPublishedComparisonsByUserID = `-- name: ListPublishedComparisonsByUserID :many
+SELECT id, user_id, brand_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, is_published, view_count, created_at, updated_at FROM comparisons WHERE user_id = $1 AND is_published = true ORDER BY created_at DESC
+`
+
+func (q *Queries) ListPublishedComparisonsByUserID(ctx context.Context, userID string) ([]Comparison, error) {
+	rows, err := q.db.Query(ctx, listPublishedComparisonsByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Comparison{}
+	for rows.Next() {
+		var i Comparison
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.BrandID,
+			&i.Title,
+			&i.Description,
+			&i.Slug,
+			&i.Category,
+			&i.BeforeImageUrl,
+			&i.AfterImageUrl,
+			&i.BeforeLabel,
+			&i.AfterLabel,
+			&i.CtaText,
+			&i.CtaUrl,
+			&i.IsPublished,
+			&i.ViewCount,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateComparison = `-- name: UpdateComparison :one
 UPDATE comparisons SET
     title = $2, description = $3, category = $4,

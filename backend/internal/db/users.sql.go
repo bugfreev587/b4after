@@ -12,7 +12,7 @@ import (
 )
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at FROM users WHERE email = $1
+SELECT id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at, custom_subdomain FROM users WHERE email = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -27,12 +27,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.StripeCustomerID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CustomSubdomain,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at FROM users WHERE id = $1
+SELECT id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at, custom_subdomain FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
@@ -47,12 +48,34 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
 		&i.StripeCustomerID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CustomSubdomain,
+	)
+	return i, err
+}
+
+const getUserBySubdomain = `-- name: GetUserBySubdomain :one
+SELECT id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at, custom_subdomain FROM users WHERE custom_subdomain = $1
+`
+
+func (q *Queries) GetUserBySubdomain(ctx context.Context, customSubdomain pgtype.Text) (User, error) {
+	row := q.db.QueryRow(ctx, getUserBySubdomain, customSubdomain)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.AvatarUrl,
+		&i.Plan,
+		&i.StripeCustomerID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CustomSubdomain,
 	)
 	return i, err
 }
 
 const updateUser = `-- name: UpdateUser :one
-UPDATE users SET name = $2, avatar_url = $3 WHERE id = $1 RETURNING id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at
+UPDATE users SET name = $2, avatar_url = $3 WHERE id = $1 RETURNING id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at, custom_subdomain
 `
 
 type UpdateUserParams struct {
@@ -73,6 +96,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.StripeCustomerID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CustomSubdomain,
 	)
 	return i, err
 }
@@ -92,6 +116,32 @@ func (q *Queries) UpdateUserPlan(ctx context.Context, arg UpdateUserPlanParams) 
 	return err
 }
 
+const updateUserSubdomain = `-- name: UpdateUserSubdomain :one
+UPDATE users SET custom_subdomain = $2 WHERE id = $1 RETURNING id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at, custom_subdomain
+`
+
+type UpdateUserSubdomainParams struct {
+	ID              string      `json:"id"`
+	CustomSubdomain pgtype.Text `json:"custom_subdomain"`
+}
+
+func (q *Queries) UpdateUserSubdomain(ctx context.Context, arg UpdateUserSubdomainParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserSubdomain, arg.ID, arg.CustomSubdomain)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.AvatarUrl,
+		&i.Plan,
+		&i.StripeCustomerID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CustomSubdomain,
+	)
+	return i, err
+}
+
 const upsertUser = `-- name: UpsertUser :one
 INSERT INTO users (id, email, name, avatar_url)
 VALUES ($1, $2, $3, $4)
@@ -100,7 +150,7 @@ ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     avatar_url = EXCLUDED.avatar_url,
     updated_at = now()
-RETURNING id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at
+RETURNING id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at, custom_subdomain
 `
 
 type UpsertUserParams struct {
@@ -127,6 +177,7 @@ func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) (User, e
 		&i.StripeCustomerID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CustomSubdomain,
 	)
 	return i, err
 }

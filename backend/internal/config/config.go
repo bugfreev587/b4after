@@ -22,8 +22,10 @@ type Config struct {
 
 	StripeSecretKey          string
 	StripeWebhookSecret      string
-	StripePriceProMonthly    string
+	StripePriceProMonthly      string
 	StripePriceBusinessMonthly string
+
+	CustomDomainBase string
 }
 
 func Load() (*Config, error) {
@@ -42,8 +44,10 @@ func Load() (*Config, error) {
 
 		StripeSecretKey:          os.Getenv("STRIPE_SECRET_KEY"),
 		StripeWebhookSecret:      os.Getenv("STRIPE_WEBHOOK_SECRET"),
-		StripePriceProMonthly:    os.Getenv("STRIPE_PRICE_PRO_MONTHLY"),
+		StripePriceProMonthly:      os.Getenv("STRIPE_PRICE_PRO_MONTHLY"),
 		StripePriceBusinessMonthly: os.Getenv("STRIPE_PRICE_BUSINESS_MONTHLY"),
+
+		CustomDomainBase: getEnv("CUSTOM_DOMAIN_BASE", "beforeafter.io"),
 	}
 
 	if cfg.DatabaseURL == "" {

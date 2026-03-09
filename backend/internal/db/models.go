@@ -305,4 +305,5 @@ type User struct {
 	StripeCustomerID pgtype.Text        `json:"stripe_customer_id"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	CustomSubdomain  pgtype.Text        `json:"custom_subdomain"`
 }

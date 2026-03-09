@@ -90,7 +90,13 @@ func (h *ComparisonHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	comps, err := h.queries.ListComparisonsByUserID(r.Context(), userID)
+	userIDs, err := middleware.GetAccessibleUserIDs(r.Context(), h.queries, userID)
+	if err != nil {
+		Error(w, http.StatusInternalServerError, "failed to get accessible users")
+		return
+	}
+
+	comps, err := h.queries.ListComparisonsByUserIDs(r.Context(), userIDs)
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to list comparisons")
 		return
@@ -162,13 +168,13 @@ func (h *ComparisonHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify ownership
+	// Verify ownership or team access
 	comp, err := h.queries.GetComparisonByID(r.Context(), pgtype.UUID{Bytes: uid, Valid: true})
 	if err != nil {
 		Error(w, http.StatusNotFound, "comparison not found")
 		return
 	}
-	if comp.UserID != userID {
+	if !middleware.CanAccessResource(r.Context(), h.queries, userID, comp.UserID) {
 		Error(w, http.StatusForbidden, "not your comparison")
 		return
 	}
@@ -219,7 +225,7 @@ func (h *ComparisonHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusNotFound, "comparison not found")
 		return
 	}
-	if comp.UserID != userID {
+	if !middleware.CanAccessResource(r.Context(), h.queries, userID, comp.UserID) {
 		Error(w, http.StatusForbidden, "not your comparison")
 		return
 	}

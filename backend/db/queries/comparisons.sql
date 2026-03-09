@@ -28,3 +28,9 @@ UPDATE comparisons SET view_count = view_count + 1 WHERE id = $1;
 
 -- name: CountComparisonsByUserID :one
 SELECT COUNT(*) FROM comparisons WHERE user_id = $1;
+
+-- name: ListComparisonsByUserIDs :many
+SELECT * FROM comparisons WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC;
+
+-- name: ListPublishedComparisonsByUserID :many
+SELECT * FROM comparisons WHERE user_id = $1 AND is_published = true ORDER BY created_at DESC;
