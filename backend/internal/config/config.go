@@ -3,14 +3,16 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	Port        string
-	DatabaseURL string
-	FrontendURL string
+	Port         string
+	DatabaseURL  string
+	FrontendURL  string
+	FrontendURLs []string
 
 	ClerkSecretKey string
 
@@ -48,6 +50,14 @@ func Load() (*Config, error) {
 		StripePriceBusinessMonthly: os.Getenv("STRIPE_PRICE_BUSINESS_MONTHLY"),
 
 		CustomDomainBase: getEnv("CUSTOM_DOMAIN_BASE", "beforeafter.io"),
+	}
+
+	// Support comma-separated FRONTEND_URL for multiple origins
+	for _, u := range strings.Split(cfg.FrontendURL, ",") {
+		u = strings.TrimSpace(u)
+		if u != "" {
+			cfg.FrontendURLs = append(cfg.FrontendURLs, u)
+		}
 	}
 
 	if cfg.DatabaseURL == "" {
