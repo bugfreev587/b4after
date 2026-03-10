@@ -89,16 +89,14 @@ export default function DashboardLayout({
                 </Avatar>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard/profile">Profile</Link>
+                <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}>
+                  Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard/settings">Settings</Link>
+                <DropdownMenuItem onClick={() => router.push("/dashboard/settings")}>
+                  Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => signOut(() => router.push("/"))}
-                >
+                <DropdownMenuItem onClick={() => signOut(() => router.push("/"))}>
                   Sign Out
                 </DropdownMenuItem>
               </DropdownMenuContent>
