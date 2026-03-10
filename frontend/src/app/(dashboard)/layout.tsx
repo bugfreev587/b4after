@@ -2,18 +2,25 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { UserButton } from "@clerk/nextjs";
+import { usePathname, useRouter } from "next/navigation";
+import { useUser, useClerk } from "@clerk/nextjs";
 import { buttonVariants } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import { useApiClient } from "@/lib/api";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/dashboard/galleries", label: "Galleries" },
   { href: "/dashboard/branding", label: "Branding" },
   { href: "/dashboard/team", label: "Team" },
-  { href: "/dashboard/settings", label: "Settings" },
   { href: "/dashboard/billing", label: "Billing" },
 ];
 
@@ -23,6 +30,9 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user } = useUser();
+  const { signOut } = useClerk();
   const api = useApiClient();
 
   // Ensure user record exists in DB on every dashboard visit
@@ -69,7 +79,30 @@ export default function DashboardLayout({
             >
               New Comparison
             </Link>
-            <UserButton />
+            <DropdownMenu>
+              <DropdownMenuTrigger className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={user?.imageUrl} alt={user?.fullName ?? "User"} />
+                  <AvatarFallback className="bg-white/10 text-white text-xs">
+                    {user?.firstName?.[0] ?? user?.emailAddresses?.[0]?.emailAddress?.[0]?.toUpperCase() ?? "U"}
+                  </AvatarFallback>
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/profile">Profile</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/settings">Settings</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => signOut(() => router.push("/"))}
+                >
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
