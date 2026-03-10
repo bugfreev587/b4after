@@ -1,8 +1,65 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
-  <rect width="800" height="600" fill="#e5e7eb"/>
-  <rect x="100" y="80" width="600" height="400" rx="20" fill="#d1d5db"/>
-  <rect x="200" y="180" width="150" height="200" rx="10" fill="#9ca3af"/>
-  <rect x="450" y="220" width="150" height="160" rx="10" fill="#9ca3af"/>
-  <circle cx="400" cy="150" r="40" fill="#9ca3af"/>
-  <text x="400" y="540" text-anchor="middle" font-family="Arial" font-size="24" fill="#6b7280">Before Renovation</text>
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8B7355"/>
+      <stop offset="100%" stop-color="#6B5B45"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5C4A32"/>
+      <stop offset="100%" stop-color="#4A3828"/>
+    </linearGradient>
+  </defs>
+  <!-- Room background - worn wall -->
+  <rect width="800" height="600" fill="url(#wall)"/>
+  <!-- Floor -->
+  <rect y="400" width="800" height="200" fill="url(#floor)"/>
+  <!-- Floor line -->
+  <line x1="0" y1="400" x2="800" y2="400" stroke="#4A3828" stroke-width="2"/>
+
+  <!-- Old window -->
+  <rect x="300" y="80" width="200" height="180" rx="4" fill="#87CEEB" opacity="0.5"/>
+  <rect x="300" y="80" width="200" height="180" rx="4" fill="none" stroke="#6B5B45" stroke-width="8"/>
+  <line x1="400" y1="80" x2="400" y2="260" stroke="#6B5B45" stroke-width="4"/>
+  <line x1="300" y1="170" x2="500" y2="170" stroke="#6B5B45" stroke-width="4"/>
+
+  <!-- Stain patches on wall -->
+  <ellipse cx="150" cy="200" rx="60" ry="40" fill="#7A6A4F" opacity="0.6"/>
+  <ellipse cx="650" cy="150" rx="50" ry="35" fill="#7A6A4F" opacity="0.5"/>
+  <ellipse cx="600" cy="320" rx="70" ry="30" fill="#7A6A4F" opacity="0.4"/>
+
+  <!-- Crack lines -->
+  <path d="M120 80 L140 150 L130 220 L145 280" fill="none" stroke="#5C4A32" stroke-width="2" opacity="0.7"/>
+  <path d="M680 100 L670 160 L690 200" fill="none" stroke="#5C4A32" stroke-width="1.5" opacity="0.6"/>
+
+  <!-- Old cabinet/counter -->
+  <rect x="50" y="300" width="300" height="100" rx="3" fill="#6B5843"/>
+  <rect x="50" y="300" width="300" height="100" rx="3" fill="none" stroke="#5A4835" stroke-width="2"/>
+  <rect x="60" y="310" width="130" height="80" rx="2" fill="#5E4C38"/>
+  <rect x="210" y="310" width="130" height="80" rx="2" fill="#5E4C38"/>
+  <!-- Handles -->
+  <rect x="115" y="345" width="20" height="4" rx="2" fill="#8B7355"/>
+  <rect x="265" y="345" width="20" height="4" rx="2" fill="#8B7355"/>
+
+  <!-- Old pendant light -->
+  <line x1="400" y1="0" x2="400" y2="40" stroke="#555" stroke-width="2"/>
+  <path d="M370 40 Q385 70 400 70 Q415 70 430 40 Z" fill="#887766"/>
+  <ellipse cx="400" cy="55" rx="8" ry="12" fill="#FFE4B5" opacity="0.4"/>
+
+  <!-- Worn floor tiles -->
+  <line x1="0" y1="450" x2="800" y2="450" stroke="#4A3828" stroke-width="1" opacity="0.5"/>
+  <line x1="0" y1="500" x2="800" y2="500" stroke="#4A3828" stroke-width="1" opacity="0.5"/>
+  <line x1="0" y1="550" x2="800" y2="550" stroke="#4A3828" stroke-width="1" opacity="0.5"/>
+  <line x1="100" y1="400" x2="100" y2="600" stroke="#4A3828" stroke-width="1" opacity="0.3"/>
+  <line x1="200" y1="400" x2="200" y2="600" stroke="#4A3828" stroke-width="1" opacity="0.3"/>
+  <line x1="300" y1="400" x2="300" y2="600" stroke="#4A3828" stroke-width="1" opacity="0.3"/>
+  <line x1="400" y1="400" x2="400" y2="600" stroke="#4A3828" stroke-width="1" opacity="0.3"/>
+  <line x1="500" y1="400" x2="500" y2="600" stroke="#4A3828" stroke-width="1" opacity="0.3"/>
+  <line x1="600" y1="400" x2="600" y2="600" stroke="#4A3828" stroke-width="1" opacity="0.3"/>
+  <line x1="700" y1="400" x2="700" y2="600" stroke="#4A3828" stroke-width="1" opacity="0.3"/>
+
+  <!-- Old appliance -->
+  <rect x="530" y="280" width="120" height="120" rx="4" fill="#6B6B6B"/>
+  <rect x="530" y="280" width="120" height="120" rx="4" fill="none" stroke="#555" stroke-width="2"/>
+  <rect x="545" y="295" width="90" height="50" rx="3" fill="#555"/>
+  <circle cx="590" cy="375" r="8" fill="#555" stroke="#4A4A4A" stroke-width="1"/>
 </svg>

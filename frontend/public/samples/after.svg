@@ -1,8 +1,92 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
-  <rect width="800" height="600" fill="#dbeafe"/>
-  <rect x="100" y="80" width="600" height="400" rx="20" fill="#93c5fd"/>
-  <rect x="200" y="180" width="150" height="200" rx="10" fill="#60a5fa"/>
-  <rect x="450" y="220" width="150" height="160" rx="10" fill="#60a5fa"/>
-  <circle cx="400" cy="150" r="40" fill="#3b82f6"/>
-  <text x="400" y="540" text-anchor="middle" font-family="Arial" font-size="24" fill="#1d4ed8">After Renovation</text>
+  <defs>
+    <linearGradient id="cleanWall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F5F0EB"/>
+      <stop offset="100%" stop-color="#EDE6DD"/>
+    </linearGradient>
+    <linearGradient id="woodFloor" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#C4956A"/>
+      <stop offset="50%" stop-color="#D4A574"/>
+      <stop offset="100%" stop-color="#C4956A"/>
+    </linearGradient>
+    <linearGradient id="marble" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#E8E4E0"/>
+      <stop offset="50%" stop-color="#F0ECE8"/>
+      <stop offset="100%" stop-color="#E8E4E0"/>
+    </linearGradient>
+    <linearGradient id="sunlight" x1="0.3" y1="0" x2="0.7" y2="1">
+      <stop offset="0%" stop-color="#FFF8E7" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#FFF8E7" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Clean wall -->
+  <rect width="800" height="600" fill="url(#cleanWall)"/>
+
+  <!-- Hardwood floor -->
+  <rect y="400" width="800" height="200" fill="url(#woodFloor)"/>
+  <!-- Floor planks -->
+  <line x1="0" y1="400" x2="800" y2="400" stroke="#B8895E" stroke-width="1.5"/>
+  <line x1="0" y1="440" x2="800" y2="440" stroke="#B8895E" stroke-width="0.5" opacity="0.4"/>
+  <line x1="0" y1="480" x2="800" y2="480" stroke="#B8895E" stroke-width="0.5" opacity="0.4"/>
+  <line x1="0" y1="520" x2="800" y2="520" stroke="#B8895E" stroke-width="0.5" opacity="0.4"/>
+  <line x1="0" y1="560" x2="800" y2="560" stroke="#B8895E" stroke-width="0.5" opacity="0.4"/>
+  <!-- Plank joints staggered -->
+  <line x1="150" y1="400" x2="150" y2="440" stroke="#B8895E" stroke-width="0.5" opacity="0.3"/>
+  <line x1="350" y1="400" x2="350" y2="440" stroke="#B8895E" stroke-width="0.5" opacity="0.3"/>
+  <line x1="550" y1="400" x2="550" y2="440" stroke="#B8895E" stroke-width="0.5" opacity="0.3"/>
+  <line x1="250" y1="440" x2="250" y2="480" stroke="#B8895E" stroke-width="0.5" opacity="0.3"/>
+  <line x1="450" y1="440" x2="450" y2="480" stroke="#B8895E" stroke-width="0.5" opacity="0.3"/>
+  <line x1="650" y1="440" x2="650" y2="480" stroke="#B8895E" stroke-width="0.5" opacity="0.3"/>
+
+  <!-- Large modern window -->
+  <rect x="280" y="60" width="240" height="220" rx="6" fill="#B5D8F7"/>
+  <rect x="280" y="60" width="240" height="220" rx="6" fill="none" stroke="#2C2C2C" stroke-width="5"/>
+  <line x1="400" y1="60" x2="400" y2="280" stroke="#2C2C2C" stroke-width="3"/>
+  <line x1="280" y1="170" x2="520" y2="170" stroke="#2C2C2C" stroke-width="3"/>
+  <!-- Window light reflection -->
+  <rect x="290" y="70" width="40" height="90" rx="2" fill="white" opacity="0.25"/>
+
+  <!-- Sunlight beam -->
+  <rect x="300" y="280" width="200" height="320" fill="url(#sunlight)" opacity="0.5"/>
+
+  <!-- Modern kitchen island / counter -->
+  <rect x="50" y="300" width="300" height="100" rx="6" fill="url(#marble)"/>
+  <rect x="50" y="300" width="300" height="100" rx="6" fill="none" stroke="#D4CFC8" stroke-width="1.5"/>
+  <!-- Cabinets below -->
+  <rect x="55" y="320" width="140" height="75" rx="4" fill="#2C3E50"/>
+  <rect x="205" y="320" width="140" height="75" rx="4" fill="#2C3E50"/>
+  <!-- Modern handles -->
+  <rect x="110" y="355" width="30" height="3" rx="1.5" fill="#C0B8A8"/>
+  <rect x="260" y="355" width="30" height="3" rx="1.5" fill="#C0B8A8"/>
+
+  <!-- Modern pendant lights -->
+  <line x1="250" y1="0" x2="250" y2="30" stroke="#2C2C2C" stroke-width="1.5"/>
+  <ellipse cx="250" cy="42" rx="20" ry="12" fill="#2C2C2C"/>
+  <ellipse cx="250" cy="48" rx="14" ry="6" fill="#FFE4B5" opacity="0.6"/>
+
+  <line x1="550" y1="0" x2="550" y2="30" stroke="#2C2C2C" stroke-width="1.5"/>
+  <ellipse cx="550" cy="42" rx="20" ry="12" fill="#2C2C2C"/>
+  <ellipse cx="550" cy="48" rx="14" ry="6" fill="#FFE4B5" opacity="0.6"/>
+
+  <!-- Modern stainless steel appliance -->
+  <rect x="530" y="270" width="130" height="130" rx="6" fill="#D4D4D4"/>
+  <rect x="530" y="270" width="130" height="130" rx="6" fill="none" stroke="#B0B0B0" stroke-width="1.5"/>
+  <rect x="545" y="285" width="100" height="55" rx="4" fill="#1A1A2E"/>
+  <!-- Display glow -->
+  <rect x="560" y="295" width="30" height="12" rx="2" fill="#4ADE80" opacity="0.8"/>
+  <circle cx="595" cy="375" r="10" fill="#B0B0B0" stroke="#A0A0A0" stroke-width="1"/>
+
+  <!-- Decorative plant -->
+  <rect x="700" y="340" width="40" height="60" rx="4" fill="#D4CFC8"/>
+  <!-- Leaves -->
+  <ellipse cx="720" cy="330" rx="18" ry="25" fill="#4ADE80" opacity="0.7"/>
+  <ellipse cx="705" cy="320" rx="14" ry="22" fill="#22C55E" opacity="0.6"/>
+  <ellipse cx="735" cy="325" rx="14" ry="20" fill="#16A34A" opacity="0.5"/>
+
+  <!-- Small framed art on wall -->
+  <rect x="620" y="100" width="80" height="100" rx="3" fill="#2C2C2C"/>
+  <rect x="626" y="106" width="68" height="88" rx="2" fill="#F0E6D8"/>
+  <circle cx="660" cy="140" r="15" fill="#E8D5C0"/>
+  <rect x="640" y="162" width="40" height="20" rx="2" fill="#D4C4B0"/>
 </svg>
