@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E8F0F8"/>
+      <stop offset="100%" stop-color="#D0DCE8"/>
+    </linearGradient>
+  </defs>
+  <!-- Gym background -->
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <!-- Floor -->
+  <rect y="480" width="800" height="120" fill="#3A3A4A"/>
+  <line x1="0" y1="480" x2="800" y2="480" stroke="#2E2E3E" stroke-width="2"/>
+
+  <!-- Mirror frame -->
+  <rect x="200" y="40" width="400" height="420" rx="8" fill="#C0C0C0"/>
+  <rect x="210" y="50" width="380" height="400" rx="4" fill="#E8ECF4" opacity="0.5"/>
+
+  <!-- Person silhouette - fit & muscular -->
+  <!-- Head -->
+  <circle cx="400" cy="125" r="33" fill="#666"/>
+  <!-- Torso - V-shape, athletic -->
+  <path d="M365 158 Q355 180 355 220 Q355 280 365 320 Q370 340 375 355 L425 355 Q430 340 435 320 Q445 280 445 220 Q445 180 435 158 Z" fill="#666"/>
+  <!-- Shoulders wider -->
+  <path d="M355 165 Q340 162 330 170 Q340 180 355 178" fill="#666"/>
+  <path d="M445 165 Q460 162 470 170 Q460 180 445 178" fill="#666"/>
+  <!-- Arms - muscular, flexing -->
+  <path d="M330 170 Q305 185 295 210 Q288 230 295 245 Q305 255 315 240 Q325 220 330 200 Q335 185 340 175" fill="#666"/>
+  <!-- Bicep bulge left -->
+  <ellipse cx="300" cy="215" rx="18" ry="12" fill="#555"/>
+  <path d="M470 170 Q495 185 505 210 Q512 230 505 245 Q495 255 485 240 Q475 220 470 200 Q465 185 460 175" fill="#666"/>
+  <!-- Bicep bulge right -->
+  <ellipse cx="500" cy="215" rx="18" ry="12" fill="#555"/>
+  <!-- Legs - muscular -->
+  <rect x="370" y="355" width="28" height="125" rx="8" fill="#666"/>
+  <rect x="402" y="355" width="28" height="125" rx="8" fill="#666"/>
+  <!-- Calf definition -->
+  <ellipse cx="384" cy="430" rx="16" ry="25" fill="#555"/>
+  <ellipse cx="416" cy="430" rx="16" ry="25" fill="#555"/>
+
+  <!-- Athletic shorts -->
+  <rect x="363" y="310" width="74" height="55" rx="4" fill="#2563EB"/>
+
+  <!-- Tank top -->
+  <path d="M362 162 L355 220 Q353 280 365 310 L435 310 Q447 280 445 220 L438 162" fill="none" stroke="#2563EB" stroke-width="2"/>
+
+  <!-- Dumbbells - heavier, being held -->
+  <rect x="260" y="235" width="50" height="14" rx="3" fill="#555"/>
+  <rect x="255" y="230" width="14" height="24" rx="3" fill="#777"/>
+  <rect x="300" y="230" width="14" height="24" rx="3" fill="#777"/>
+
+  <rect x="490" y="235" width="50" height="14" rx="3" fill="#555"/>
+  <rect x="485" y="230" width="14" height="24" rx="3" fill="#777"/>
+  <rect x="530" y="230" width="14" height="24" rx="3" fill="#777"/>
+
+  <!-- Energy/achievement sparkles -->
+  <g fill="#FFD700" opacity="0.6">
+    <polygon points="250,120 253,128 261,128 255,133 257,140 250,136 243,140 245,133 239,128 247,128"/>
+    <polygon points="550,120 553,128 561,128 555,133 557,140 550,136 543,140 545,133 539,128 547,128"/>
+  </g>
+</svg>

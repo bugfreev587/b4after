@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFF5F0"/>
+      <stop offset="100%" stop-color="#FDEEE8"/>
+    </linearGradient>
+    <linearGradient id="lip-gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E8555A"/>
+      <stop offset="100%" stop-color="#C4383D"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="800" height="600" fill="url(#bg)"/>
+
+  <!-- Face shape - smoother, glowing -->
+  <ellipse cx="400" cy="320" rx="170" ry="210" fill="#F5DBC8"/>
+
+  <!-- Hair - styled -->
+  <ellipse cx="400" cy="180" rx="190" ry="120" fill="#4A2A14"/>
+  <ellipse cx="250" cy="280" rx="50" ry="150" fill="#4A2A14"/>
+  <ellipse cx="550" cy="280" rx="50" ry="150" fill="#4A2A14"/>
+  <!-- Hair highlights -->
+  <path d="M320 130 Q340 160 330 220" fill="none" stroke="#6B4226" stroke-width="3" opacity="0.4"/>
+  <path d="M460 130 Q470 160 480 220" fill="none" stroke="#6B4226" stroke-width="3" opacity="0.4"/>
+
+  <!-- Eyebrows - filled, shaped -->
+  <path d="M295 225 Q320 212 355 218 Q360 222 355 225 Q320 220 300 230Z" fill="#5A3A1E"/>
+  <path d="M445 218 Q480 212 505 225 Q500 230 480 220 Q460 222 445 225Z" fill="#5A3A1E"/>
+
+  <!-- Eyes with makeup -->
+  <!-- Left eye -->
+  <ellipse cx="340" cy="270" rx="30" ry="16" fill="white"/>
+  <circle cx="340" cy="270" r="12" fill="#6B4226"/>
+  <circle cx="340" cy="270" r="6" fill="#1A1A1A"/>
+  <circle cx="344" cy="266" r="2.5" fill="white"/>
+  <!-- Eyeliner -->
+  <path d="M308 268 Q340 250 372 268" fill="none" stroke="#1A1A1A" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Wing -->
+  <path d="M370 265 L380 258" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/>
+  <!-- Eyeshadow -->
+  <path d="M310 264 Q340 245 370 264" fill="#B8687A" opacity="0.25"/>
+  <!-- Eyelashes -->
+  <line x1="315" y1="262" x2="312" y2="255" stroke="#1A1A1A" stroke-width="1.5"/>
+  <line x1="325" y1="258" x2="323" y2="250" stroke="#1A1A1A" stroke-width="1.5"/>
+  <line x1="340" y1="255" x2="340" y2="247" stroke="#1A1A1A" stroke-width="1.5"/>
+  <line x1="355" y1="258" x2="357" y2="250" stroke="#1A1A1A" stroke-width="1.5"/>
+  <line x1="365" y1="262" x2="368" y2="255" stroke="#1A1A1A" stroke-width="1.5"/>
+
+  <!-- Right eye -->
+  <ellipse cx="460" cy="270" rx="30" ry="16" fill="white"/>
+  <circle cx="460" cy="270" r="12" fill="#6B4226"/>
+  <circle cx="460" cy="270" r="6" fill="#1A1A1A"/>
+  <circle cx="464" cy="266" r="2.5" fill="white"/>
+  <!-- Eyeliner -->
+  <path d="M428 268 Q460 250 492 268" fill="none" stroke="#1A1A1A" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Wing -->
+  <path d="M430 265 L420 258" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/>
+  <!-- Eyeshadow -->
+  <path d="M430 264 Q460 245 490 264" fill="#B8687A" opacity="0.25"/>
+  <!-- Eyelashes -->
+  <line x1="435" y1="262" x2="432" y2="255" stroke="#1A1A1A" stroke-width="1.5"/>
+  <line x1="445" y1="258" x2="443" y2="250" stroke="#1A1A1A" stroke-width="1.5"/>
+  <line x1="460" y1="255" x2="460" y2="247" stroke="#1A1A1A" stroke-width="1.5"/>
+  <line x1="475" y1="258" x2="477" y2="250" stroke="#1A1A1A" stroke-width="1.5"/>
+  <line x1="485" y1="262" x2="488" y2="255" stroke="#1A1A1A" stroke-width="1.5"/>
+
+  <!-- Blush -->
+  <ellipse cx="305" cy="340" rx="30" ry="18" fill="#E8A0A0" opacity="0.25"/>
+  <ellipse cx="495" cy="340" rx="30" ry="18" fill="#E8A0A0" opacity="0.25"/>
+
+  <!-- Nose - contoured -->
+  <path d="M395 280 Q390 320 385 345 Q395 352 405 352 Q415 352 415 345 Q410 320 405 280" fill="none" stroke="#E0B8A0" stroke-width="1.5"/>
+  <!-- Nose highlight -->
+  <line x1="400" y1="285" x2="400" y2="335" stroke="white" stroke-width="2" opacity="0.2"/>
+
+  <!-- Lips - bold red, glossy -->
+  <path d="M355 392 Q378 380 400 387 Q422 380 445 392 Q440 395 400 398 Q360 395 355 392Z" fill="url(#lip-gloss)"/>
+  <path d="M355 395 Q378 405 400 410 Q422 405 445 395 Q440 400 400 405 Q360 400 355 395Z" fill="url(#lip-gloss)"/>
+  <!-- Lip shine -->
+  <ellipse cx="400" cy="392" rx="12" ry="4" fill="white" opacity="0.25"/>
+
+  <!-- Highlighter glow spots -->
+  <circle cx="320" cy="255" r="8" fill="white" opacity="0.15"/>
+  <circle cx="480" cy="255" r="8" fill="white" opacity="0.15"/>
+  <circle cx="400" cy="290" r="5" fill="white" opacity="0.1"/>
+
+  <!-- Neck -->
+  <rect x="360" y="510" width="80" height="90" rx="30" fill="#F5DBC8"/>
+</svg>

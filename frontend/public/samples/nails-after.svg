@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFF0F5"/>
+      <stop offset="100%" stop-color="#FCE4EC"/>
+    </linearGradient>
+    <linearGradient id="nail-gloss" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF6B8A"/>
+      <stop offset="40%" stop-color="#E91E63"/>
+      <stop offset="100%" stop-color="#C2185B"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <!-- Table surface -->
+  <rect y="350" width="800" height="250" rx="0" fill="#F8ECE4"/>
+  <line x1="0" y1="350" x2="800" y2="350" stroke="#EED8C8" stroke-width="2"/>
+
+  <!-- Hand outline -->
+  <ellipse cx="400" cy="340" rx="180" ry="60" fill="#F5DBC8"/>
+
+  <!-- Finger 1 (pinky) -->
+  <rect x="180" y="200" width="55" height="160" rx="27" fill="#F5DBC8"/>
+  <!-- Polished nail -->
+  <rect x="188" y="200" width="39" height="35" rx="12" fill="url(#nail-gloss)"/>
+  <rect x="195" y="204" width="8" height="18" rx="4" fill="white" opacity="0.3"/>
+
+  <!-- Finger 2 (ring) -->
+  <rect x="260" y="170" width="60" height="190" rx="30" fill="#F5DBC8"/>
+  <!-- Polished nail -->
+  <rect x="270" y="170" width="40" height="38" rx="14" fill="url(#nail-gloss)"/>
+  <rect x="278" y="174" width="8" height="20" rx="4" fill="white" opacity="0.3"/>
+
+  <!-- Finger 3 (middle) -->
+  <rect x="345" y="150" width="65" height="210" rx="32" fill="#F5DBC8"/>
+  <!-- Polished nail -->
+  <rect x="356" y="150" width="43" height="42" rx="15" fill="url(#nail-gloss)"/>
+  <rect x="365" y="154" width="9" height="22" rx="4" fill="white" opacity="0.3"/>
+
+  <!-- Finger 4 (index) -->
+  <rect x="435" y="165" width="62" height="195" rx="31" fill="#F5DBC8"/>
+  <!-- Polished nail -->
+  <rect x="445" y="165" width="42" height="40" rx="14" fill="url(#nail-gloss)"/>
+  <rect x="453" y="169" width="8" height="20" rx="4" fill="white" opacity="0.3"/>
+
+  <!-- Finger 5 (thumb) -->
+  <rect x="530" y="240" width="70" height="140" rx="35" fill="#F5DBC8" transform="rotate(20 565 310)"/>
+  <!-- Polished nail -->
+  <rect x="543" y="240" width="44" height="38" rx="14" fill="url(#nail-gloss)" transform="rotate(20 565 259)"/>
+  <rect x="553" y="244" width="8" height="20" rx="4" fill="white" opacity="0.25" transform="rotate(20 557 254)"/>
+
+  <!-- Cuticle lines -->
+  <path d="M190 232 Q207 226 225 232" fill="none" stroke="#E8C8B4" stroke-width="1"/>
+  <path d="M272 206 Q290 198 298 206" fill="none" stroke="#E8C8B4" stroke-width="1"/>
+  <path d="M358 190 Q377 182 397 190" fill="none" stroke="#E8C8B4" stroke-width="1"/>
+  <path d="M447 203 Q466 195 485 203" fill="none" stroke="#E8C8B4" stroke-width="1"/>
+
+  <!-- Sparkle accents -->
+  <g fill="#FFD700" opacity="0.7">
+    <polygon points="160,180 163,188 170,188 165,193 167,200 160,196 153,200 155,193 150,188 157,188"/>
+    <polygon points="520,150 522,155 528,155 524,158 525,163 520,160 515,163 516,158 512,155 518,155"/>
+    <polygon points="340,130 342,135 347,135 343,138 344,143 340,140 336,143 337,138 333,135 338,135"/>
+  </g>
+</svg>

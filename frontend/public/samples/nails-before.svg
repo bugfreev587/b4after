@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FDE8E8"/>
+      <stop offset="100%" stop-color="#F5D5D5"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <!-- Table surface -->
+  <rect y="350" width="800" height="250" rx="0" fill="#E8D5C4"/>
+  <line x1="0" y1="350" x2="800" y2="350" stroke="#D4C0AE" stroke-width="2"/>
+
+  <!-- Hand outline -->
+  <ellipse cx="400" cy="340" rx="180" ry="60" fill="#F0D0B8"/>
+
+  <!-- Finger 1 (pinky) -->
+  <rect x="180" y="200" width="55" height="160" rx="27" fill="#F0D0B8"/>
+  <!-- Chipped nail -->
+  <rect x="188" y="200" width="39" height="35" rx="12" fill="#E8A0A0"/>
+  <rect x="195" y="205" width="10" height="8" rx="2" fill="#F0D0B8" opacity="0.7"/>
+
+  <!-- Finger 2 (ring) -->
+  <rect x="260" y="170" width="60" height="190" rx="30" fill="#F0D0B8"/>
+  <!-- Chipped nail -->
+  <rect x="270" y="170" width="40" height="38" rx="14" fill="#D4908A"/>
+  <path d="M285 175 L295 180 L290 190" fill="#F0D0B8" opacity="0.6"/>
+
+  <!-- Finger 3 (middle) -->
+  <rect x="345" y="150" width="65" height="210" rx="32" fill="#F0D0B8"/>
+  <!-- Chipped nail -->
+  <rect x="356" y="150" width="43" height="42" rx="15" fill="#C4807A"/>
+  <rect x="365" y="155" width="15" height="10" rx="3" fill="#F0D0B8" opacity="0.5"/>
+
+  <!-- Finger 4 (index) -->
+  <rect x="435" y="165" width="62" height="195" rx="31" fill="#F0D0B8"/>
+  <!-- Chipped nail -->
+  <rect x="445" y="165" width="42" height="40" rx="14" fill="#E8A0A0"/>
+  <path d="M460 170 L470 178 L465 185" fill="#F0D0B8" opacity="0.6"/>
+
+  <!-- Finger 5 (thumb) - angled -->
+  <rect x="530" y="240" width="70" height="140" rx="35" fill="#F0D0B8" transform="rotate(20 565 310)"/>
+  <!-- Chipped nail -->
+  <rect x="543" y="240" width="44" height="38" rx="14" fill="#D4908A" transform="rotate(20 565 259)"/>
+
+  <!-- Cuticle lines -->
+  <path d="M190 232 Q207 226 225 232" fill="none" stroke="#D4B8A4" stroke-width="1"/>
+  <path d="M272 206 Q290 198 298 206" fill="none" stroke="#D4B8A4" stroke-width="1"/>
+  <path d="M358 190 Q377 182 397 190" fill="none" stroke="#D4B8A4" stroke-width="1"/>
+  <path d="M447 203 Q466 195 485 203" fill="none" stroke="#D4B8A4" stroke-width="1"/>
+</svg>

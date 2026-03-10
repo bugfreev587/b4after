@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F0E8E0"/>
+      <stop offset="100%" stop-color="#E8DDD4"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="800" height="600" fill="url(#bg)"/>
+
+  <!-- Face shape -->
+  <ellipse cx="400" cy="320" rx="170" ry="210" fill="#F0D0B8"/>
+
+  <!-- Hair -->
+  <ellipse cx="400" cy="180" rx="190" ry="120" fill="#6B4226"/>
+  <ellipse cx="250" cy="280" rx="50" ry="150" fill="#6B4226"/>
+  <ellipse cx="550" cy="280" rx="50" ry="150" fill="#6B4226"/>
+
+  <!-- Eyebrows - thin, sparse -->
+  <path d="M300 230 Q330 222 360 228" fill="none" stroke="#8B6B4A" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M440 228 Q470 222 500 230" fill="none" stroke="#8B6B4A" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Eyes -->
+  <!-- Left eye -->
+  <ellipse cx="340" cy="270" rx="30" ry="16" fill="white"/>
+  <circle cx="340" cy="270" r="12" fill="#6B4226"/>
+  <circle cx="340" cy="270" r="6" fill="#1A1A1A"/>
+  <circle cx="344" cy="266" r="2.5" fill="white"/>
+  <!-- Eyelid line -->
+  <path d="M310 268 Q340 254 370 268" fill="none" stroke="#B8A090" stroke-width="1.5"/>
+
+  <!-- Right eye -->
+  <ellipse cx="460" cy="270" rx="30" ry="16" fill="white"/>
+  <circle cx="460" cy="270" r="12" fill="#6B4226"/>
+  <circle cx="460" cy="270" r="6" fill="#1A1A1A"/>
+  <circle cx="464" cy="266" r="2.5" fill="white"/>
+  <!-- Eyelid line -->
+  <path d="M430 268 Q460 254 490 268" fill="none" stroke="#B8A090" stroke-width="1.5"/>
+
+  <!-- Under-eye circles -->
+  <ellipse cx="340" cy="288" rx="22" ry="8" fill="#D4B8A8" opacity="0.4"/>
+  <ellipse cx="460" cy="288" rx="22" ry="8" fill="#D4B8A8" opacity="0.4"/>
+
+  <!-- Nose -->
+  <path d="M395 280 Q390 320 385 345 Q395 352 405 352 Q415 352 415 345 Q410 320 405 280" fill="none" stroke="#E0B8A0" stroke-width="1.5"/>
+
+  <!-- Lips - natural, no color -->
+  <path d="M360 395 Q380 385 400 390 Q420 385 440 395" fill="none" stroke="#C8A090" stroke-width="2"/>
+  <path d="M360 395 Q380 400 400 405 Q420 400 440 395" fill="#D4A898" opacity="0.6"/>
+
+  <!-- Blemishes / uneven skin -->
+  <circle cx="310" cy="350" r="4" fill="#D4A898" opacity="0.5"/>
+  <circle cx="480" cy="340" r="3" fill="#D4A898" opacity="0.4"/>
+  <circle cx="370" cy="370" r="3.5" fill="#D4A898" opacity="0.45"/>
+  <circle cx="450" cy="370" r="2.5" fill="#D4A898" opacity="0.4"/>
+
+  <!-- Neck -->
+  <rect x="360" y="510" width="80" height="90" rx="30" fill="#F0D0B8"/>
+</svg>

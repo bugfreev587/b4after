@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFF5F0"/>
+      <stop offset="100%" stop-color="#FDE8E0"/>
+    </linearGradient>
+    <linearGradient id="tooth-shine" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F0F0F0"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="800" height="600" fill="url(#bg)"/>
+
+  <!-- Face lower half outline -->
+  <ellipse cx="400" cy="400" rx="220" ry="200" fill="#F5DBC8"/>
+
+  <!-- Nose hint -->
+  <ellipse cx="400" cy="215" rx="25" ry="15" fill="#EDD0B4"/>
+
+  <!-- Lips - bigger, confident smile -->
+  <!-- Upper lip -->
+  <path d="M270 305 Q335 280 400 298 Q465 280 530 305 Q510 322 400 328 Q290 322 270 305Z" fill="#E8736B"/>
+  <!-- Lower lip -->
+  <path d="M280 385 Q340 420 400 425 Q460 420 520 385 Q510 400 400 408 Q290 400 280 385Z" fill="#D4635B"/>
+
+  <!-- Mouth opening -->
+  <path d="M280 310 Q340 298 400 305 Q460 298 520 310 Q520 385 400 400 Q280 385 280 310Z" fill="#3A1515"/>
+
+  <!-- Upper teeth row - white, even, aligned -->
+  <rect x="300" y="310" width="30" height="32" rx="5" fill="url(#tooth-shine)" stroke="#E8E8E8" stroke-width="0.5"/>
+  <rect x="333" y="308" width="28" height="34" rx="5" fill="url(#tooth-shine)" stroke="#E8E8E8" stroke-width="0.5"/>
+  <rect x="364" y="307" width="32" height="35" rx="5" fill="url(#tooth-shine)" stroke="#E8E8E8" stroke-width="0.5"/>
+  <rect x="399" y="307" width="32" height="35" rx="5" fill="url(#tooth-shine)" stroke="#E8E8E8" stroke-width="0.5"/>
+  <rect x="434" y="308" width="28" height="34" rx="5" fill="url(#tooth-shine)" stroke="#E8E8E8" stroke-width="0.5"/>
+  <rect x="465" y="310" width="30" height="32" rx="5" fill="url(#tooth-shine)" stroke="#E8E8E8" stroke-width="0.5"/>
+
+  <!-- Subtle tooth gaps -->
+  <line x1="333" y1="311" x2="333" y2="340" stroke="#E0E0E0" stroke-width="0.8"/>
+  <line x1="364" y1="309" x2="364" y2="341" stroke="#E0E0E0" stroke-width="0.8"/>
+  <line x1="399" y1="308" x2="399" y2="341" stroke="#E0E0E0" stroke-width="0.8"/>
+  <line x1="434" y1="309" x2="434" y2="341" stroke="#E0E0E0" stroke-width="0.8"/>
+  <line x1="465" y1="311" x2="465" y2="340" stroke="#E0E0E0" stroke-width="0.8"/>
+
+  <!-- Lower teeth -->
+  <rect x="315" y="368" width="26" height="26" rx="4" fill="url(#tooth-shine)"/>
+  <rect x="344" y="366" width="25" height="28" rx="4" fill="url(#tooth-shine)"/>
+  <rect x="372" y="365" width="26" height="29" rx="4" fill="url(#tooth-shine)"/>
+  <rect x="401" y="365" width="26" height="29" rx="4" fill="url(#tooth-shine)"/>
+  <rect x="430" y="366" width="25" height="28" rx="4" fill="url(#tooth-shine)"/>
+  <rect x="458" y="368" width="26" height="26" rx="4" fill="url(#tooth-shine)"/>
+
+  <!-- Sparkle / shine effects -->
+  <g fill="white" opacity="0.8">
+    <polygon points="350,295 352,300 358,300 354,303 355,308 350,305 345,308 346,303 342,300 348,300"/>
+    <polygon points="450,295 452,300 458,300 454,303 455,308 450,305 445,308 446,303 442,300 448,300"/>
+  </g>
+  <circle cx="380" cy="320" r="3" fill="white" opacity="0.4"/>
+  <circle cx="420" cy="318" r="2.5" fill="white" opacity="0.35"/>
+</svg>
