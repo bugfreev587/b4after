@@ -157,6 +157,27 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Live Demo Embed */}
+      <section className="py-20 sm:py-24 bg-gray-950">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 text-white">
+            See It in Action
+          </h2>
+          <p className="text-gray-400 text-center mb-10 max-w-xl mx-auto">
+            Drag the slider to compare before and after — just like your clients will.
+          </p>
+          <div className="rounded-2xl border border-white/15 overflow-hidden">
+            <iframe
+              src="https://b4after.io/embed/kitchen-048204"
+              width="100%"
+              height="500"
+              frameBorder="0"
+              className="block"
+            />
+          </div>
+        </div>
+      </section>
+
       {/* Features */}
       <section id="features" className="py-20 sm:py-24 bg-[#070d18]">
         <div className="mx-auto max-w-5xl px-4 sm:px-6">
