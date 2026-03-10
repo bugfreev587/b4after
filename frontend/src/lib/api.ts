@@ -65,6 +65,9 @@ export function useApiClient() {
   const fetchApi = useCallback(
     async <T>(path: string, options: RequestInit = {}): Promise<T> => {
       const token = await getToken();
+      if (!token) {
+        console.warn(`[api] No auth token available for ${path}`);
+      }
       return apiFetch<T>(path, token, options);
     },
     [getToken],

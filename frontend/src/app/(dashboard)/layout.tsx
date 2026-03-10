@@ -27,7 +27,11 @@ export default function DashboardLayout({
 
   // Ensure user record exists in DB on every dashboard visit
   useEffect(() => {
-    api.fetch("/users/me").catch(() => {});
+    api
+      .fetch("/users/me")
+      .catch((err) =>
+        console.error("[dashboard] Failed to sync user:", err),
+      );
   }, [api]);
 
   return (
