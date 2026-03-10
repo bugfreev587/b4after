@@ -10,10 +10,10 @@ export default async function MarketingLayout({
   const { userId } = await auth();
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="bg-[#1A1425] border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-          <Link href="/" className="text-xl font-bold text-white">
+    <div className="min-h-screen flex flex-col bg-[#06090f] text-slate-100">
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-slate-950/80 backdrop-blur-md">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 flex items-center justify-between h-14">
+          <Link href="/" className="text-lg font-bold text-white">
             BeforeAfter.io
           </Link>
           <nav className="flex items-center gap-4">
@@ -21,8 +21,7 @@ export default async function MarketingLayout({
               <>
                 <Link
                   href="/dashboard"
-                  className="text-sm px-4 py-2 rounded-md font-medium text-white transition"
-                  style={{ background: "var(--gradient-brand)" }}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
                 >
                   Dashboard
                 </Link>
@@ -32,14 +31,13 @@ export default async function MarketingLayout({
               <>
                 <Link
                   href="/sign-in"
-                  className="text-sm text-gray-300 hover:text-white transition"
+                  className="text-sm font-medium text-slate-300 hover:text-white transition-colors"
                 >
                   Sign in
                 </Link>
                 <Link
                   href="/sign-up"
-                  className="text-sm px-4 py-2 rounded-md font-medium text-white transition"
-                  style={{ background: "var(--gradient-brand)" }}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
                 >
                   Get Started
                 </Link>
@@ -48,9 +46,9 @@ export default async function MarketingLayout({
           </nav>
         </div>
       </header>
-      <main className="flex-1">{children}</main>
-      <footer className="bg-[#1A1425] border-t border-white/10 py-8">
-        <div className="max-w-7xl mx-auto px-4 text-center text-sm text-gray-400">
+      <main className="flex-1 pt-14">{children}</main>
+      <footer className="border-t border-white/10 bg-[#04070d] py-10">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 text-center text-sm text-slate-500">
           &copy; {new Date().getFullYear()} BeforeAfter.io. All rights reserved.
         </div>
       </footer>

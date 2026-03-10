@@ -4,34 +4,47 @@ const FEATURES = [
   {
     title: "Interactive Slider",
     desc: "Drag to compare before and after — works on desktop and mobile.",
-    icon: "🎚️",
+    tag: "Core",
+    tagColor: "blue",
   },
   {
     title: "One-Click Sharing",
     desc: "Share a public link or embed the slider on any website.",
-    icon: "🔗",
+    tag: "Share",
+    tagColor: "violet",
   },
   {
     title: "Built-in Analytics",
     desc: "Track views, interactions, and CTA clicks in real time.",
-    icon: "📊",
+    tag: "Insights",
+    tagColor: "emerald",
   },
   {
     title: "Custom Branding",
     desc: "Add your logo, colors, and call-to-action to every comparison.",
-    icon: "🎨",
+    tag: "Pro",
+    tagColor: "orange",
   },
   {
     title: "Video Export",
     desc: "Generate comparison videos for social media in seconds.",
-    icon: "🎬",
+    tag: "Pro",
+    tagColor: "orange",
   },
   {
     title: "Gallery Pages",
     desc: "Group comparisons into beautiful gallery pages for your portfolio.",
-    icon: "🖼️",
+    tag: "Core",
+    tagColor: "blue",
   },
 ];
+
+const TAG_STYLES: Record<string, string> = {
+  blue: "bg-blue-500/15 text-blue-200 border border-blue-400/20",
+  violet: "bg-violet-500/15 text-violet-200 border border-violet-400/20",
+  orange: "bg-orange-500/15 text-orange-200 border border-orange-400/20",
+  emerald: "bg-emerald-500/15 text-emerald-200 border border-emerald-400/20",
+};
 
 const PRICING = [
   {
@@ -91,42 +104,66 @@ const FAQ = [
   },
 ];
 
+const STEPS = [
+  {
+    step: "1",
+    title: "Upload Photos",
+    desc: "Upload your before and after photos. We support JPEG, PNG, and WebP.",
+  },
+  {
+    step: "2",
+    title: "Customize",
+    desc: "Add labels, descriptions, and a call-to-action button.",
+  },
+  {
+    step: "3",
+    title: "Share",
+    desc: "Get a shareable link, embed code, or export a video for social media.",
+  },
+];
+
 export default function HomePage() {
   return (
     <div>
       {/* Hero */}
-      <section className="py-24 px-4">
-        <div className="max-w-5xl mx-auto text-center">
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 text-white">
-            Showcase Your Results with
-            <br />
-            <span
-              className="bg-clip-text text-transparent"
-              style={{ backgroundImage: "var(--gradient-brand)" }}
-            >
-              Before & After
-            </span>{" "}
+      <section className="relative bg-gray-950 text-white overflow-hidden">
+        {/* Grid background */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff07_1px,transparent_1px),linear-gradient(to_bottom,#ffffff07_1px,transparent_1px)] bg-[size:72px_72px]" />
+        {/* Blur glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[500px] w-[700px] rounded-full bg-blue-600/10 blur-3xl pointer-events-none" />
+
+        <div className="relative mx-auto max-w-5xl px-4 sm:px-6 pt-20 pb-28 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2 mb-10 text-sm text-gray-400">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            Trusted by service businesses worldwide
+          </div>
+
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.08] tracking-tight mb-5">
+            Showcase Your Results with{" "}
+            <span className="text-blue-400">Before & After</span>{" "}
             Comparisons
           </h1>
-          <p className="text-xl md:text-2xl text-gray-400 mb-10 max-w-2xl mx-auto font-light">
+
+          <p className="text-gray-400 text-base sm:text-lg max-w-2xl mx-auto mb-10 leading-relaxed">
             Upload two photos. Get an interactive slider, shareable page, and
             social media video — in seconds.
           </p>
-          <div className="flex gap-4 justify-center mb-14">
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
             <a
               href="/sign-up"
-              className="px-6 py-3 rounded-lg text-lg font-medium text-white transition hover:opacity-90"
-              style={{ background: "var(--gradient-brand)" }}
+              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-7 py-3.5 text-base font-semibold text-white hover:bg-blue-700 transition-colors"
             >
               Get Started Free
             </a>
             <a
               href="#how-it-works"
-              className="border border-white/10 text-gray-300 px-6 py-3 rounded-lg text-lg font-medium hover:bg-white/5 transition"
+              className="inline-flex items-center justify-center rounded-lg border border-white/15 bg-white/5 px-7 py-3.5 text-base font-semibold text-white hover:bg-white/10 transition-colors"
             >
               See How It Works
             </a>
           </div>
+
           <div className="max-w-2xl mx-auto">
             <LandingSlider />
           </div>
@@ -134,40 +171,24 @@ export default function HomePage() {
       </section>
 
       {/* How It Works */}
-      <section id="how-it-works" className="py-20 bg-[#1A1425] px-4">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-semibold text-center mb-12 text-white">
+      <section id="how-it-works" className="py-20 sm:py-24 bg-[#0b1220]">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 text-white">
             How It Works
           </h2>
+          <p className="text-gray-400 text-center mb-12 max-w-xl mx-auto">
+            Three simple steps to create stunning visual comparisons.
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                step: "1",
-                title: "Upload Photos",
-                desc: "Upload your before and after photos. We support JPEG, PNG, and WebP.",
-              },
-              {
-                step: "2",
-                title: "Customize",
-                desc: "Add labels, descriptions, and a call-to-action button.",
-              },
-              {
-                step: "3",
-                title: "Share",
-                desc: "Get a shareable link, embed code, or export a video for social media.",
-              },
-            ].map((item) => (
+            {STEPS.map((item) => (
               <div key={item.step} className="text-center">
-                <div
-                  className="w-12 h-12 text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4"
-                  style={{ background: "var(--gradient-brand)" }}
-                >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-sm font-bold text-blue-400 mx-auto mb-4">
                   {item.step}
                 </div>
-                <h3 className="text-xl font-medium mb-2 text-white">
+                <h3 className="text-xl font-semibold mb-2 text-white">
                   {item.title}
                 </h3>
-                <p className="text-gray-400">{item.desc}</p>
+                <p className="text-gray-400 text-sm leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -175,26 +196,30 @@ export default function HomePage() {
       </section>
 
       {/* Features */}
-      <section className="py-20 px-4">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-semibold text-center mb-4 text-white">
-            Features
+      <section className="py-20 sm:py-24 bg-[#070d18]">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 text-white">
+            Everything You Need
           </h2>
           <p className="text-gray-400 text-center mb-12 max-w-2xl mx-auto">
-            Everything you need to create, share, and track stunning before &
-            after comparisons.
+            Create, share, and track stunning before &amp; after comparisons
+            with powerful tools built for your business.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {FEATURES.map((f) => (
               <div
                 key={f.title}
-                className="bg-[#1A1425] border border-white/10 rounded-xl p-6 hover:border-white/20 transition"
+                className="rounded-2xl border border-white/15 bg-white/[0.03] p-7 hover:border-white/30 transition-colors"
               >
-                <div className="text-2xl mb-3">{f.icon}</div>
-                <h3 className="text-lg font-medium mb-2 text-white">
+                <span
+                  className={`inline-block rounded-lg px-2.5 py-0.5 text-xs font-semibold mb-4 ${TAG_STYLES[f.tagColor]}`}
+                >
+                  {f.tag}
+                </span>
+                <h3 className="text-lg font-semibold mb-2 text-white">
                   {f.title}
                 </h3>
-                <p className="text-gray-400 text-sm">{f.desc}</p>
+                <p className="text-gray-400 text-sm leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -202,9 +227,9 @@ export default function HomePage() {
       </section>
 
       {/* Pricing */}
-      <section className="py-20 bg-[#1A1425] px-4">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-semibold text-center mb-4 text-white">
+      <section className="py-20 sm:py-24 bg-[#06090f]">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 text-white">
             Simple, Transparent Pricing
           </h2>
           <p className="text-gray-400 text-center mb-12">
@@ -214,27 +239,14 @@ export default function HomePage() {
             {PRICING.map((plan) => (
               <div
                 key={plan.name}
-                className={`rounded-xl p-8 ${
+                className={`relative flex flex-col rounded-2xl p-7 transition-shadow ${
                   plan.highlighted
-                    ? "bg-[#221C2E] ring-2 ring-transparent"
-                    : "bg-[#0F0B15] border border-white/10"
+                    ? "border-2 border-blue-500 bg-slate-950/95 shadow-2xl shadow-blue-900/40 ring-1 ring-blue-400/30"
+                    : "border border-white/15 bg-white/[0.03] shadow-sm hover:shadow-md hover:border-white/30"
                 }`}
-                style={
-                  plan.highlighted
-                    ? {
-                        background:
-                          "linear-gradient(#221C2E, #221C2E) padding-box, var(--gradient-brand) border-box",
-                        border: "2px solid transparent",
-                        borderRadius: "0.75rem",
-                      }
-                    : undefined
-                }
               >
                 {plan.highlighted && (
-                  <div
-                    className="text-xs font-semibold text-white px-3 py-1 rounded-full w-fit mb-4"
-                    style={{ background: "var(--gradient-brand)" }}
-                  >
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-4 py-1 text-xs font-bold text-white uppercase tracking-wide shadow-sm">
                     Most Popular
                   </div>
                 )}
@@ -243,16 +255,16 @@ export default function HomePage() {
                   <span className="text-4xl font-bold text-white">
                     {plan.price}
                   </span>
-                  <span className="text-gray-400">{plan.period}</span>
+                  <span className="text-gray-400 ml-1">{plan.period}</span>
                 </div>
-                <ul className="space-y-3 mb-8">
+                <ul className="space-y-3 mb-8 flex-1">
                   {plan.features.map((f) => (
                     <li
                       key={f}
-                      className="flex items-center gap-2 text-sm text-gray-300"
+                      className="flex items-center gap-3 text-sm text-slate-300"
                     >
                       <svg
-                        className="w-4 h-4 text-green-400 shrink-0"
+                        className="w-4 h-4 text-emerald-400 shrink-0"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -270,16 +282,11 @@ export default function HomePage() {
                 </ul>
                 <a
                   href="/sign-up"
-                  className={`block text-center py-2.5 px-4 rounded-lg font-medium transition ${
+                  className={`block w-full rounded-xl py-3 text-center text-sm font-semibold transition-colors ${
                     plan.highlighted
-                      ? "text-white hover:opacity-90"
-                      : "border border-white/10 text-gray-300 hover:bg-white/5"
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      : "border border-white/15 bg-white/5 text-white hover:bg-white/10"
                   }`}
-                  style={
-                    plan.highlighted
-                      ? { background: "var(--gradient-brand)" }
-                      : undefined
-                  }
                 >
                   {plan.cta}
                 </a>
@@ -290,23 +297,50 @@ export default function HomePage() {
       </section>
 
       {/* FAQ */}
-      <section className="py-20 px-4">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-semibold text-center mb-12 text-white">
+      <section className="py-20 sm:py-24 bg-[#070d18]">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12 text-white">
             Frequently Asked Questions
           </h2>
-          <div className="space-y-4">
+          <div className="divide-y divide-white/10 rounded-2xl border border-white/15 bg-slate-950 overflow-hidden">
             {FAQ.map((item) => (
-              <details
-                key={item.q}
-                className="border border-white/10 rounded-xl bg-[#1A1425] group"
-              >
-                <summary className="px-6 py-4 cursor-pointer font-medium text-white hover:bg-white/5 rounded-xl transition">
+              <details key={item.q} className="group">
+                <summary className="flex w-full items-center justify-between gap-4 bg-slate-950 px-6 py-5 text-left cursor-pointer hover:bg-slate-900 transition-colors font-medium text-white">
                   {item.q}
+                  <span className="shrink-0 text-xl text-slate-400 transition-transform duration-200 group-open:rotate-45">
+                    +
+                  </span>
                 </summary>
-                <p className="px-6 pb-4 text-gray-400">{item.a}</p>
+                <p className="px-6 pb-5 text-gray-400 leading-relaxed">{item.a}</p>
               </details>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="py-24 sm:py-32 bg-gray-950 text-white">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 leading-tight">
+            Ready to showcase your work?
+          </h2>
+          <p className="text-gray-400 text-lg mb-10 max-w-xl mx-auto">
+            Join thousands of businesses using BeforeAfter.io to convert more
+            clients with visual proof.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <a
+              href="/sign-up"
+              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-8 py-4 text-base font-semibold text-white hover:bg-blue-700 transition-colors"
+            >
+              Get Started Free
+            </a>
+            <a
+              href="#how-it-works"
+              className="inline-flex items-center justify-center rounded-lg border border-white/15 bg-white/5 px-8 py-4 text-base font-semibold text-white hover:bg-white/10 transition-colors"
+            >
+              Learn More
+            </a>
           </div>
         </div>
       </section>
