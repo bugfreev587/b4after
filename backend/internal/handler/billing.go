@@ -104,7 +104,7 @@ func (h *BillingHandler) CreateCheckoutSession(w http.ResponseWriter, r *http.Re
 
 	if user.StripeCustomerID.Valid {
 		params.Customer = stripe.String(user.StripeCustomerID.String)
-	} else {
+	} else if user.Email != "" {
 		params.CustomerEmail = stripe.String(user.Email)
 	}
 
