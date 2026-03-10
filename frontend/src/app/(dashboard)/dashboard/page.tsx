@@ -7,6 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 
+interface Space {
+  id: string;
+  name: string;
+  slug: string;
+  category: string;
+  description: string | null;
+  is_public: boolean;
+}
+
 interface Comparison {
   id: string;
   title: string;
@@ -20,31 +29,37 @@ interface Comparison {
 }
 
 export default function DashboardPage() {
+  const [spaces, setSpaces] = useState<Space[]>([]);
   const [comparisons, setComparisons] = useState<Comparison[]>([]);
   const [loading, setLoading] = useState(true);
   const api = useApiClient();
 
   useEffect(() => {
-    api
-      .fetch<Comparison[]>("/comparisons")
-      .then(setComparisons)
-      .catch((err) => console.error("Failed to load comparisons:", err))
+    Promise.all([
+      api.fetch<Space[]>("/spaces").catch(() => [] as Space[]),
+      api.fetch<Comparison[]>("/comparisons").catch(() => [] as Comparison[]),
+    ])
+      .then(([s, c]) => {
+        setSpaces(s);
+        setComparisons(c);
+      })
       .finally(() => setLoading(false));
   }, [api]);
 
   if (loading) {
-    return <p className="text-muted-foreground">Loading comparisons...</p>;
+    return <p className="text-muted-foreground">Loading...</p>;
   }
 
-  if (comparisons.length === 0) {
+  // If no spaces, show CTA to create first space
+  if (spaces.length === 0) {
     return (
       <div className="text-center py-16">
-        <h2 className="text-2xl font-bold mb-2">No comparisons yet</h2>
+        <h2 className="text-2xl font-bold mb-2">Welcome to B4After!</h2>
         <p className="text-muted-foreground mb-6">
-          Create your first before & after comparison
+          Create your first Space to start organizing comparisons
         </p>
-        <Link href="/dashboard/new" className={buttonVariants()}>
-          Create Comparison
+        <Link href="/dashboard/spaces/new" className={buttonVariants()}>
+          Create Your First Space
         </Link>
       </div>
     );
@@ -53,43 +68,94 @@ export default function DashboardPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">My Comparisons</h1>
+        <h1 className="text-2xl font-bold">Dashboard</h1>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {comparisons.map((comp) => (
-          <Link key={comp.id} href={`/dashboard/${comp.id}`}>
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg truncate">
-                    {comp.title}
-                  </CardTitle>
-                  <Badge variant={comp.is_published ? "default" : "secondary"}>
-                    {comp.is_published ? "Published" : "Draft"}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <img
-                    src={comp.before_image_url}
-                    alt="Before"
-                    className="rounded aspect-square object-cover w-full"
-                  />
-                  <img
-                    src={comp.after_image_url}
-                    alt="After"
-                    className="rounded aspect-square object-cover w-full"
-                  />
-                </div>
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span className="capitalize">{comp.category}</span>
-                  <span>{comp.view_count} views</span>
-                </div>
-              </CardContent>
-            </Card>
+
+      {/* Spaces overview */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">My Spaces</h2>
+          <Link
+            href="/dashboard/spaces"
+            className="text-sm text-muted-foreground hover:text-white"
+          >
+            View All
           </Link>
-        ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {spaces.slice(0, 3).map((space) => (
+            <Link key={space.id} href={`/dashboard/spaces/${space.id}`}>
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base truncate">
+                      {space.name}
+                    </CardTitle>
+                    <Badge
+                      variant={space.is_public ? "default" : "secondary"}
+                    >
+                      {space.is_public ? "Public" : "Private"}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <span className="text-xs text-muted-foreground capitalize">
+                    {space.category}
+                  </span>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Recent comparisons */}
+      <div>
+        <h2 className="text-lg font-semibold mb-4">Recent Comparisons</h2>
+        {comparisons.length === 0 ? (
+          <p className="text-muted-foreground text-center py-4">
+            No comparisons yet. Add one from a space!
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {comparisons.slice(0, 6).map((comp) => (
+              <Link key={comp.id} href={`/dashboard/${comp.id}`}>
+                <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm truncate">
+                        {comp.title}
+                      </CardTitle>
+                      <Badge
+                        variant={comp.is_published ? "default" : "secondary"}
+                      >
+                        {comp.is_published ? "Published" : "Draft"}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      <img
+                        src={comp.before_image_url}
+                        alt="Before"
+                        className="rounded aspect-square object-cover w-full"
+                      />
+                      <img
+                        src={comp.after_image_url}
+                        alt="After"
+                        className="rounded aspect-square object-cover w-full"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="capitalize">{comp.category}</span>
+                      <span>{comp.view_count} views</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

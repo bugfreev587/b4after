@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/dashboard/spaces", label: "Spaces" },
   { href: "/dashboard/galleries", label: "Galleries" },
   { href: "/dashboard/branding", label: "Branding" },
   { href: "/dashboard/team", label: "Team" },

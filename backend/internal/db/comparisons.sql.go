@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countComparisonsBySpaceID = `-- name: CountComparisonsBySpaceID :one
+SELECT COUNT(*) FROM comparisons WHERE space_id = $1
+`
+
+func (q *Queries) CountComparisonsBySpaceID(ctx context.Context, spaceID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countComparisonsBySpaceID, spaceID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countComparisonsByUserID = `-- name: CountComparisonsByUserID :one
 SELECT COUNT(*) FROM comparisons WHERE user_id = $1
 `
@@ -23,24 +34,27 @@ func (q *Queries) CountComparisonsByUserID(ctx context.Context, userID string) (
 }
 
 const createComparison = `-- name: CreateComparison :one
-INSERT INTO comparisons (user_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, process_images)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-RETURNING id, user_id, brand_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, is_published, view_count, created_at, updated_at, process_images
+INSERT INTO comparisons (user_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, process_images, space_id, source, upload_request_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+RETURNING id, user_id, brand_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, is_published, view_count, created_at, updated_at, process_images, space_id, source, upload_request_id
 `
 
 type CreateComparisonParams struct {
-	UserID         string             `json:"user_id"`
-	Title          string             `json:"title"`
-	Description    pgtype.Text        `json:"description"`
-	Slug           string             `json:"slug"`
-	Category       ComparisonCategory `json:"category"`
-	BeforeImageUrl string             `json:"before_image_url"`
-	AfterImageUrl  string             `json:"after_image_url"`
-	BeforeLabel    string             `json:"before_label"`
-	AfterLabel     string             `json:"after_label"`
-	CtaText        pgtype.Text        `json:"cta_text"`
-	CtaUrl         pgtype.Text        `json:"cta_url"`
-	ProcessImages  []byte             `json:"process_images"`
+	UserID          string             `json:"user_id"`
+	Title           string             `json:"title"`
+	Description     pgtype.Text        `json:"description"`
+	Slug            string             `json:"slug"`
+	Category        ComparisonCategory `json:"category"`
+	BeforeImageUrl  string             `json:"before_image_url"`
+	AfterImageUrl   string             `json:"after_image_url"`
+	BeforeLabel     string             `json:"before_label"`
+	AfterLabel      string             `json:"after_label"`
+	CtaText         pgtype.Text        `json:"cta_text"`
+	CtaUrl          pgtype.Text        `json:"cta_url"`
+	ProcessImages   []byte             `json:"process_images"`
+	SpaceID         pgtype.UUID        `json:"space_id"`
+	Source          ComparisonSource   `json:"source"`
+	UploadRequestID pgtype.UUID        `json:"upload_request_id"`
 }
 
 func (q *Queries) CreateComparison(ctx context.Context, arg CreateComparisonParams) (Comparison, error) {
@@ -57,6 +71,9 @@ func (q *Queries) CreateComparison(ctx context.Context, arg CreateComparisonPara
 		arg.CtaText,
 		arg.CtaUrl,
 		arg.ProcessImages,
+		arg.SpaceID,
+		arg.Source,
+		arg.UploadRequestID,
 	)
 	var i Comparison
 	err := row.Scan(
@@ -78,6 +95,9 @@ func (q *Queries) CreateComparison(ctx context.Context, arg CreateComparisonPara
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ProcessImages,
+		&i.SpaceID,
+		&i.Source,
+		&i.UploadRequestID,
 	)
 	return i, err
 }
@@ -92,7 +112,7 @@ func (q *Queries) DeleteComparison(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getComparisonByID = `-- name: GetComparisonByID :one
-SELECT id, user_id, brand_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, is_published, view_count, created_at, updated_at, process_images FROM comparisons WHERE id = $1
+SELECT id, user_id, brand_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, is_published, view_count, created_at, updated_at, process_images, space_id, source, upload_request_id FROM comparisons WHERE id = $1
 `
 
 func (q *Queries) GetComparisonByID(ctx context.Context, id pgtype.UUID) (Comparison, error) {
@@ -117,12 +137,15 @@ func (q *Queries) GetComparisonByID(ctx context.Context, id pgtype.UUID) (Compar
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ProcessImages,
+		&i.SpaceID,
+		&i.Source,
+		&i.UploadRequestID,
 	)
 	return i, err
 }
 
 const getComparisonBySlug = `-- name: GetComparisonBySlug :one
-SELECT id, user_id, brand_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, is_published, view_count, created_at, updated_at, process_images FROM comparisons WHERE slug = $1
+SELECT id, user_id, brand_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, is_published, view_count, created_at, updated_at, process_images, space_id, source, upload_request_id FROM comparisons WHERE slug = $1
 `
 
 func (q *Queries) GetComparisonBySlug(ctx context.Context, slug string) (Comparison, error) {
@@ -147,6 +170,9 @@ func (q *Queries) GetComparisonBySlug(ctx context.Context, slug string) (Compari
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ProcessImages,
+		&i.SpaceID,
+		&i.Source,
+		&i.UploadRequestID,
 	)
 	return i, err
 }
@@ -160,8 +186,54 @@ func (q *Queries) IncrementViewCount(ctx context.Context, id pgtype.UUID) error 
 	return err
 }
 
+const listComparisonsBySpaceID = `-- name: ListComparisonsBySpaceID :many
+SELECT id, user_id, brand_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, is_published, view_count, created_at, updated_at, process_images, space_id, source, upload_request_id FROM comparisons WHERE space_id = $1 ORDER BY created_at DESC
+`
+
+func (q *Queries) ListComparisonsBySpaceID(ctx context.Context, spaceID pgtype.UUID) ([]Comparison, error) {
+	rows, err := q.db.Query(ctx, listComparisonsBySpaceID, spaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Comparison{}
+	for rows.Next() {
+		var i Comparison
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.BrandID,
+			&i.Title,
+			&i.Description,
+			&i.Slug,
+			&i.Category,
+			&i.BeforeImageUrl,
+			&i.AfterImageUrl,
+			&i.BeforeLabel,
+			&i.AfterLabel,
+			&i.CtaText,
+			&i.CtaUrl,
+			&i.IsPublished,
+			&i.ViewCount,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProcessImages,
+			&i.SpaceID,
+			&i.Source,
+			&i.UploadRequestID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listComparisonsByUserID = `-- name: ListComparisonsByUserID :many
-SELECT id, user_id, brand_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, is_published, view_count, created_at, updated_at, process_images FROM comparisons WHERE user_id = $1 ORDER BY created_at DESC
+SELECT id, user_id, brand_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, is_published, view_count, created_at, updated_at, process_images, space_id, source, upload_request_id FROM comparisons WHERE user_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListComparisonsByUserID(ctx context.Context, userID string) ([]Comparison, error) {
@@ -192,6 +264,9 @@ func (q *Queries) ListComparisonsByUserID(ctx context.Context, userID string) ([
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ProcessImages,
+			&i.SpaceID,
+			&i.Source,
+			&i.UploadRequestID,
 		); err != nil {
 			return nil, err
 		}
@@ -204,7 +279,7 @@ func (q *Queries) ListComparisonsByUserID(ctx context.Context, userID string) ([
 }
 
 const listComparisonsByUserIDs = `-- name: ListComparisonsByUserIDs :many
-SELECT id, user_id, brand_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, is_published, view_count, created_at, updated_at, process_images FROM comparisons WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC
+SELECT id, user_id, brand_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, is_published, view_count, created_at, updated_at, process_images, space_id, source, upload_request_id FROM comparisons WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC
 `
 
 func (q *Queries) ListComparisonsByUserIDs(ctx context.Context, dollar_1 []string) ([]Comparison, error) {
@@ -235,6 +310,55 @@ func (q *Queries) ListComparisonsByUserIDs(ctx context.Context, dollar_1 []strin
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ProcessImages,
+			&i.SpaceID,
+			&i.Source,
+			&i.UploadRequestID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPublishedComparisonsBySpaceID = `-- name: ListPublishedComparisonsBySpaceID :many
+SELECT id, user_id, brand_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, is_published, view_count, created_at, updated_at, process_images, space_id, source, upload_request_id FROM comparisons WHERE space_id = $1 AND is_published = true ORDER BY created_at DESC
+`
+
+func (q *Queries) ListPublishedComparisonsBySpaceID(ctx context.Context, spaceID pgtype.UUID) ([]Comparison, error) {
+	rows, err := q.db.Query(ctx, listPublishedComparisonsBySpaceID, spaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Comparison{}
+	for rows.Next() {
+		var i Comparison
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.BrandID,
+			&i.Title,
+			&i.Description,
+			&i.Slug,
+			&i.Category,
+			&i.BeforeImageUrl,
+			&i.AfterImageUrl,
+			&i.BeforeLabel,
+			&i.AfterLabel,
+			&i.CtaText,
+			&i.CtaUrl,
+			&i.IsPublished,
+			&i.ViewCount,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProcessImages,
+			&i.SpaceID,
+			&i.Source,
+			&i.UploadRequestID,
 		); err != nil {
 			return nil, err
 		}
@@ -247,7 +371,7 @@ func (q *Queries) ListComparisonsByUserIDs(ctx context.Context, dollar_1 []strin
 }
 
 const listPublishedComparisonsByUserID = `-- name: ListPublishedComparisonsByUserID :many
-SELECT id, user_id, brand_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, is_published, view_count, created_at, updated_at, process_images FROM comparisons WHERE user_id = $1 AND is_published = true ORDER BY created_at DESC
+SELECT id, user_id, brand_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, is_published, view_count, created_at, updated_at, process_images, space_id, source, upload_request_id FROM comparisons WHERE user_id = $1 AND is_published = true ORDER BY created_at DESC
 `
 
 func (q *Queries) ListPublishedComparisonsByUserID(ctx context.Context, userID string) ([]Comparison, error) {
@@ -278,6 +402,9 @@ func (q *Queries) ListPublishedComparisonsByUserID(ctx context.Context, userID s
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ProcessImages,
+			&i.SpaceID,
+			&i.Source,
+			&i.UploadRequestID,
 		); err != nil {
 			return nil, err
 		}
@@ -295,7 +422,7 @@ UPDATE comparisons SET
     before_image_url = $5, after_image_url = $6,
     before_label = $7, after_label = $8,
     cta_text = $9, cta_url = $10, is_published = $11, process_images = $12
-WHERE id = $1 RETURNING id, user_id, brand_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, is_published, view_count, created_at, updated_at, process_images
+WHERE id = $1 RETURNING id, user_id, brand_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, is_published, view_count, created_at, updated_at, process_images, space_id, source, upload_request_id
 `
 
 type UpdateComparisonParams struct {
@@ -348,6 +475,9 @@ func (q *Queries) UpdateComparison(ctx context.Context, arg UpdateComparisonPara
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ProcessImages,
+		&i.SpaceID,
+		&i.Source,
+		&i.UploadRequestID,
 	)
 	return i, err
 }

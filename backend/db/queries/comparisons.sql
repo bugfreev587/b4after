@@ -1,6 +1,6 @@
 -- name: CreateComparison :one
-INSERT INTO comparisons (user_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, process_images)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+INSERT INTO comparisons (user_id, title, description, slug, category, before_image_url, after_image_url, before_label, after_label, cta_text, cta_url, process_images, space_id, source, upload_request_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 RETURNING *;
 
 -- name: GetComparisonByID :one
@@ -34,3 +34,12 @@ SELECT * FROM comparisons WHERE user_id = ANY($1::text[]) ORDER BY created_at DE
 
 -- name: ListPublishedComparisonsByUserID :many
 SELECT * FROM comparisons WHERE user_id = $1 AND is_published = true ORDER BY created_at DESC;
+
+-- name: ListComparisonsBySpaceID :many
+SELECT * FROM comparisons WHERE space_id = $1 ORDER BY created_at DESC;
+
+-- name: CountComparisonsBySpaceID :one
+SELECT COUNT(*) FROM comparisons WHERE space_id = $1;
+
+-- name: ListPublishedComparisonsBySpaceID :many
+SELECT * FROM comparisons WHERE space_id = $1 AND is_published = true ORDER BY created_at DESC;

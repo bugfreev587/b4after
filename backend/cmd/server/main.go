@@ -80,6 +80,20 @@ func main() {
 	subdomainHandler := handler.NewSubdomainHandler(queries, cfg)
 	r.Get("/api/subdomain/{subdomain}", subdomainHandler.GetPublicPage)
 
+	// Public space wall
+	spaceHandler := handler.NewSpaceHandler(queries)
+	r.Get("/api/spaces/{slug}/public", spaceHandler.GetPublicWall)
+	r.Get("/api/spaces/{slug}/embed", spaceHandler.GetEmbedData)
+
+	// Email client (for upload requests)
+	emailClient := email.NewClient(cfg.ResendAPIKey)
+
+	// Public upload request endpoints
+	uploadReqHandler := handler.NewUploadRequestHandler(queries, r2, emailClient, cfg.FrontendURL)
+	r.Get("/api/requests/{token}", uploadReqHandler.GetRequestByToken)
+	r.Post("/api/requests/{token}/upload", uploadReqHandler.UploadPhoto)
+	r.Post("/api/requests/{token}/submit", uploadReqHandler.SubmitRequest)
+
 	// Stripe webhook (public, verified by signature)
 	if cfg.StripeSecretKey != "" {
 		billingHandler := handler.NewBillingHandler(queries, cfg)
@@ -102,6 +116,13 @@ func main() {
 			uploadHandler := handler.NewNoopUploadHandler()
 			r.Post("/api/upload", uploadHandler.UploadLocal)
 		}
+
+		// Spaces
+		r.Get("/api/spaces", spaceHandler.List)
+		r.Post("/api/spaces", spaceHandler.Create)
+		r.Get("/api/spaces/{id}", spaceHandler.Get)
+		r.Put("/api/spaces/{id}", spaceHandler.Update)
+		r.Delete("/api/spaces/{id}", spaceHandler.Delete)
 
 		// Comparisons
 		r.Get("/api/comparisons", compHandler.List)
@@ -155,8 +176,14 @@ func main() {
 		r.Post("/api/galleries/{id}/comparisons", galleryHandler.AddComparison)
 		r.Delete("/api/galleries/{id}/comparisons/{compId}", galleryHandler.RemoveComparison)
 
+		// Upload Requests (protected routes)
+		r.Post("/api/spaces/{id}/requests", uploadReqHandler.CreateRequest)
+		r.Get("/api/spaces/{id}/requests", uploadReqHandler.ListRequests)
+		r.Post("/api/requests/{id}/remind", uploadReqHandler.SendReminder)
+		r.Post("/api/requests/{id}/approve", uploadReqHandler.Approve)
+		r.Post("/api/requests/{id}/reject", uploadReqHandler.Reject)
+
 		// Teams (business only)
-		emailClient := email.NewClient(cfg.ResendAPIKey)
 		teamHandler := handler.NewTeamHandler(queries, emailClient, cfg.FrontendURL)
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.RequirePlan(queries, db.UserPlanBusiness))
@@ -185,6 +212,7 @@ func main() {
 		}
 	})
 
+	log.Printf("CORS allowed origins: %v", cfg.FrontendURLs)
 	log.Printf("Server starting on :%s", cfg.Port)
 	log.Fatal(http.ListenAndServe(":"+cfg.Port, r))
 }

@@ -110,7 +110,7 @@ func (q *Queries) GetGalleryBySlug(ctx context.Context, slug string) (Gallery, e
 }
 
 const getGalleryComparisons = `-- name: GetGalleryComparisons :many
-SELECT c.id, c.user_id, c.brand_id, c.title, c.description, c.slug, c.category, c.before_image_url, c.after_image_url, c.before_label, c.after_label, c.cta_text, c.cta_url, c.is_published, c.view_count, c.created_at, c.updated_at, c.process_images FROM comparisons c
+SELECT c.id, c.user_id, c.brand_id, c.title, c.description, c.slug, c.category, c.before_image_url, c.after_image_url, c.before_label, c.after_label, c.cta_text, c.cta_url, c.is_published, c.view_count, c.created_at, c.updated_at, c.process_images, c.space_id, c.source, c.upload_request_id FROM comparisons c
 JOIN gallery_comparisons gc ON gc.comparison_id = c.id
 WHERE gc.gallery_id = $1
 ORDER BY gc.sort_order
@@ -144,6 +144,9 @@ func (q *Queries) GetGalleryComparisons(ctx context.Context, galleryID pgtype.UU
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ProcessImages,
+			&i.SpaceID,
+			&i.Source,
+			&i.UploadRequestID,
 		); err != nil {
 			return nil, err
 		}

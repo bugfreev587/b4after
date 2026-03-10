@@ -100,6 +100,91 @@ func (ns NullComparisonCategory) Value() (driver.Value, error) {
 	return string(ns.ComparisonCategory), nil
 }
 
+type ComparisonSource string
+
+const (
+	ComparisonSourceMerchant ComparisonSource = "merchant"
+	ComparisonSourceClient   ComparisonSource = "client"
+)
+
+func (e *ComparisonSource) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ComparisonSource(s)
+	case string:
+		*e = ComparisonSource(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ComparisonSource: %T", src)
+	}
+	return nil
+}
+
+type NullComparisonSource struct {
+	ComparisonSource ComparisonSource `json:"comparison_source"`
+	Valid            bool             `json:"valid"` // Valid is true if ComparisonSource is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullComparisonSource) Scan(value interface{}) error {
+	if value == nil {
+		ns.ComparisonSource, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ComparisonSource.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullComparisonSource) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ComparisonSource), nil
+}
+
+type CtaType string
+
+const (
+	CtaTypeLink   CtaType = "link"
+	CtaTypeButton CtaType = "button"
+	CtaTypeNone   CtaType = "none"
+)
+
+func (e *CtaType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CtaType(s)
+	case string:
+		*e = CtaType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CtaType: %T", src)
+	}
+	return nil
+}
+
+type NullCtaType struct {
+	CtaType CtaType `json:"cta_type"`
+	Valid   bool    `json:"valid"` // Valid is true if CtaType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCtaType) Scan(value interface{}) error {
+	if value == nil {
+		ns.CtaType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CtaType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCtaType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CtaType), nil
+}
+
 type DeviceType string
 
 const (
@@ -186,6 +271,138 @@ func (ns NullTeamRole) Value() (driver.Value, error) {
 	return string(ns.TeamRole), nil
 }
 
+type UploadRequestSentVia string
+
+const (
+	UploadRequestSentViaEmail      UploadRequestSentVia = "email"
+	UploadRequestSentViaSms        UploadRequestSentVia = "sms"
+	UploadRequestSentViaManualLink UploadRequestSentVia = "manual_link"
+)
+
+func (e *UploadRequestSentVia) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = UploadRequestSentVia(s)
+	case string:
+		*e = UploadRequestSentVia(s)
+	default:
+		return fmt.Errorf("unsupported scan type for UploadRequestSentVia: %T", src)
+	}
+	return nil
+}
+
+type NullUploadRequestSentVia struct {
+	UploadRequestSentVia UploadRequestSentVia `json:"upload_request_sent_via"`
+	Valid                bool                 `json:"valid"` // Valid is true if UploadRequestSentVia is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullUploadRequestSentVia) Scan(value interface{}) error {
+	if value == nil {
+		ns.UploadRequestSentVia, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.UploadRequestSentVia.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullUploadRequestSentVia) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.UploadRequestSentVia), nil
+}
+
+type UploadRequestStatus string
+
+const (
+	UploadRequestStatusSent      UploadRequestStatus = "sent"
+	UploadRequestStatusOpened    UploadRequestStatus = "opened"
+	UploadRequestStatusSubmitted UploadRequestStatus = "submitted"
+	UploadRequestStatusApproved  UploadRequestStatus = "approved"
+	UploadRequestStatusRejected  UploadRequestStatus = "rejected"
+	UploadRequestStatusExpired   UploadRequestStatus = "expired"
+)
+
+func (e *UploadRequestStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = UploadRequestStatus(s)
+	case string:
+		*e = UploadRequestStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for UploadRequestStatus: %T", src)
+	}
+	return nil
+}
+
+type NullUploadRequestStatus struct {
+	UploadRequestStatus UploadRequestStatus `json:"upload_request_status"`
+	Valid               bool                `json:"valid"` // Valid is true if UploadRequestStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullUploadRequestStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.UploadRequestStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.UploadRequestStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullUploadRequestStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.UploadRequestStatus), nil
+}
+
+type UploadRequestType string
+
+const (
+	UploadRequestTypeBeforeOnly UploadRequestType = "before_only"
+	UploadRequestTypeAfterOnly  UploadRequestType = "after_only"
+	UploadRequestTypeBoth       UploadRequestType = "both"
+)
+
+func (e *UploadRequestType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = UploadRequestType(s)
+	case string:
+		*e = UploadRequestType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for UploadRequestType: %T", src)
+	}
+	return nil
+}
+
+type NullUploadRequestType struct {
+	UploadRequestType UploadRequestType `json:"upload_request_type"`
+	Valid             bool              `json:"valid"` // Valid is true if UploadRequestType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullUploadRequestType) Scan(value interface{}) error {
+	if value == nil {
+		ns.UploadRequestType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.UploadRequestType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullUploadRequestType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.UploadRequestType), nil
+}
+
 type UserPlan string
 
 const (
@@ -252,24 +469,27 @@ type Brand struct {
 }
 
 type Comparison struct {
-	ID             pgtype.UUID        `json:"id"`
-	UserID         string             `json:"user_id"`
-	BrandID        pgtype.UUID        `json:"brand_id"`
-	Title          string             `json:"title"`
-	Description    pgtype.Text        `json:"description"`
-	Slug           string             `json:"slug"`
-	Category       ComparisonCategory `json:"category"`
-	BeforeImageUrl string             `json:"before_image_url"`
-	AfterImageUrl  string             `json:"after_image_url"`
-	BeforeLabel    string             `json:"before_label"`
-	AfterLabel     string             `json:"after_label"`
-	CtaText        pgtype.Text        `json:"cta_text"`
-	CtaUrl         pgtype.Text        `json:"cta_url"`
-	IsPublished    bool               `json:"is_published"`
-	ViewCount      int32              `json:"view_count"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
-	ProcessImages  []byte             `json:"process_images"`
+	ID              pgtype.UUID        `json:"id"`
+	UserID          string             `json:"user_id"`
+	BrandID         pgtype.UUID        `json:"brand_id"`
+	Title           string             `json:"title"`
+	Description     pgtype.Text        `json:"description"`
+	Slug            string             `json:"slug"`
+	Category        ComparisonCategory `json:"category"`
+	BeforeImageUrl  string             `json:"before_image_url"`
+	AfterImageUrl   string             `json:"after_image_url"`
+	BeforeLabel     string             `json:"before_label"`
+	AfterLabel      string             `json:"after_label"`
+	CtaText         pgtype.Text        `json:"cta_text"`
+	CtaUrl          pgtype.Text        `json:"cta_url"`
+	IsPublished     bool               `json:"is_published"`
+	ViewCount       int32              `json:"view_count"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	ProcessImages   []byte             `json:"process_images"`
+	SpaceID         pgtype.UUID        `json:"space_id"`
+	Source          ComparisonSource   `json:"source"`
+	UploadRequestID pgtype.UUID        `json:"upload_request_id"`
 }
 
 type Gallery struct {
@@ -289,12 +509,55 @@ type GalleryComparison struct {
 	SortOrder    int32       `json:"sort_order"`
 }
 
+type Space struct {
+	ID            pgtype.UUID        `json:"id"`
+	UserID        string             `json:"user_id"`
+	Slug          string             `json:"slug"`
+	Name          string             `json:"name"`
+	Description   pgtype.Text        `json:"description"`
+	Category      ComparisonCategory `json:"category"`
+	CoverImageUrl pgtype.Text        `json:"cover_image_url"`
+	Services      []byte             `json:"services"`
+	CtaText       pgtype.Text        `json:"cta_text"`
+	CtaUrl        pgtype.Text        `json:"cta_url"`
+	CtaType       CtaType            `json:"cta_type"`
+	IsPublic      bool               `json:"is_public"`
+	Subdomain     pgtype.Text        `json:"subdomain"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+}
+
 type TeamMember struct {
 	ID          pgtype.UUID        `json:"id"`
 	UserID      string             `json:"user_id"`
 	TeamOwnerID string             `json:"team_owner_id"`
 	Role        TeamRole           `json:"role"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type UploadRequest struct {
+	ID              pgtype.UUID          `json:"id"`
+	SpaceID         pgtype.UUID          `json:"space_id"`
+	UserID          string               `json:"user_id"`
+	Token           string               `json:"token"`
+	ClientName      pgtype.Text          `json:"client_name"`
+	ClientEmail     pgtype.Text          `json:"client_email"`
+	ClientPhone     pgtype.Text          `json:"client_phone"`
+	RequestType     UploadRequestType    `json:"request_type"`
+	InstructionNote pgtype.Text          `json:"instruction_note"`
+	BeforeImageUrl  pgtype.Text          `json:"before_image_url"`
+	AfterImageUrl   pgtype.Text          `json:"after_image_url"`
+	ReviewRating    pgtype.Int4          `json:"review_rating"`
+	ReviewContent   pgtype.Text          `json:"review_content"`
+	ServiceType     pgtype.Text          `json:"service_type"`
+	Status          UploadRequestStatus  `json:"status"`
+	SentVia         UploadRequestSentVia `json:"sent_via"`
+	ReminderSentAt  pgtype.Timestamptz   `json:"reminder_sent_at"`
+	SubmittedAt     pgtype.Timestamptz   `json:"submitted_at"`
+	ReviewedAt      pgtype.Timestamptz   `json:"reviewed_at"`
+	ExpiresAt       pgtype.Timestamptz   `json:"expires_at"`
+	CreatedAt       pgtype.Timestamptz   `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz   `json:"updated_at"`
 }
 
 type User struct {

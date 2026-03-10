@@ -38,6 +38,7 @@ type createComparisonRequest struct {
 	CtaText        string          `json:"cta_text"`
 	CtaURL         string          `json:"cta_url"`
 	ProcessImages  json.RawMessage `json:"process_images"`
+	SpaceID        string          `json:"space_id"`
 }
 
 func (h *ComparisonHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -67,14 +68,45 @@ func (h *ComparisonHandler) Create(w http.ResponseWriter, r *http.Request) {
 		req.Category = "other"
 	}
 
-	// Enforce free plan limit: 3 comparisons
+	if req.SpaceID == "" {
+		Error(w, http.StatusBadRequest, "space_id is required")
+		return
+	}
+	spaceUID, err := uuid.Parse(req.SpaceID)
+	if err != nil {
+		Error(w, http.StatusBadRequest, "invalid space_id")
+		return
+	}
+	spaceUUID := pgtype.UUID{Bytes: spaceUID, Valid: true}
+
+	// Verify space exists and user has access
+	space, err := h.queries.GetSpaceByID(r.Context(), spaceUUID)
+	if err != nil {
+		Error(w, http.StatusNotFound, "space not found")
+		return
+	}
+	if !middleware.CanAccessResource(r.Context(), h.queries, userID, space.UserID) {
+		Error(w, http.StatusForbidden, "not your space")
+		return
+	}
+
+	// Enforce per-space comparison limits: free=1, pro=5, business=10
 	user, err := h.queries.GetUserByID(r.Context(), userID)
-	if err == nil && user.Plan == db.UserPlanFree {
-		count, err := h.queries.CountComparisonsByUserID(r.Context(), userID)
-		if err == nil && count >= 3 {
-			Error(w, http.StatusForbidden, "free plan is limited to 3 comparisons — upgrade to create more")
-			return
-		}
+	if err != nil {
+		Error(w, http.StatusInternalServerError, "failed to get user")
+		return
+	}
+	var maxPerSpace int64 = 1
+	switch user.Plan {
+	case db.UserPlanPro:
+		maxPerSpace = 5
+	case db.UserPlanBusiness:
+		maxPerSpace = 10
+	}
+	compCount, err := h.queries.CountComparisonsBySpaceID(r.Context(), spaceUUID)
+	if err == nil && compCount >= maxPerSpace {
+		Error(w, http.StatusForbidden, "comparison limit per space reached — upgrade to create more")
+		return
 	}
 
 	slug := service.GenerateSlug(req.Title)
@@ -92,6 +124,8 @@ func (h *ComparisonHandler) Create(w http.ResponseWriter, r *http.Request) {
 		CtaText:        pgtype.Text{String: req.CtaText, Valid: req.CtaText != ""},
 		CtaUrl:         pgtype.Text{String: req.CtaURL, Valid: req.CtaURL != ""},
 		ProcessImages:  req.ProcessImages,
+		SpaceID:        spaceUUID,
+		Source:         db.ComparisonSourceMerchant,
 	})
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to create comparison")
@@ -274,8 +308,13 @@ func comparisonResponse(c db.Comparison) map[string]any {
 		"cta_url":          pgtextToPtr(c.CtaUrl),
 		"is_published":     c.IsPublished,
 		"view_count":       c.ViewCount,
+		"space_id":         uuidToString(c.SpaceID),
+		"source":           string(c.Source),
 		"created_at":       c.CreatedAt.Time,
 		"updated_at":       c.UpdatedAt.Time,
+	}
+	if c.UploadRequestID.Valid {
+		resp["upload_request_id"] = uuidToString(c.UploadRequestID)
 	}
 	if c.ProcessImages != nil {
 		resp["process_images"] = json.RawMessage(c.ProcessImages)
