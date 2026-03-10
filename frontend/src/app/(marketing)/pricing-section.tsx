@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
 const PRICING = [
   {
@@ -11,6 +15,8 @@ const PRICING = [
     annualPeriod: "forever",
     features: ["3 comparisons", "Public pages", "Basic analytics"],
     cta: "Get Started",
+    ctaSignedIn: "Current Plan",
+    plan: "free",
     highlighted: false,
   },
   {
@@ -26,7 +32,9 @@ const PRICING = [
       "Advanced analytics",
       "Priority support",
     ],
-    cta: "Start Free Trial",
+    cta: "Start 14-Day Free Trial",
+    ctaSignedIn: "Start 14-Day Free Trial",
+    plan: "pro",
     highlighted: true,
   },
   {
@@ -42,13 +50,53 @@ const PRICING = [
       "API access",
       "White-label embed",
     ],
-    cta: "Contact Sales",
+    cta: "Start 14-Day Free Trial",
+    ctaSignedIn: "Start 14-Day Free Trial",
+    plan: "business",
     highlighted: false,
   },
 ];
 
 export function PricingSection() {
   const [isAnnual, setIsAnnual] = useState(false);
+  const [loading, setLoading] = useState<string | null>(null);
+  const { isSignedIn, getToken } = useAuth();
+  const router = useRouter();
+
+  async function handleCheckout(plan: string) {
+    if (!isSignedIn) {
+      router.push("/sign-up");
+      return;
+    }
+
+    if (plan === "free") {
+      router.push("/dashboard");
+      return;
+    }
+
+    setLoading(plan);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_URL}/billing/checkout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ plan, interval: isAnnual ? "annual" : "monthly" }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || "Failed to start checkout");
+      }
+    } catch {
+      alert("Failed to start checkout. Please try again.");
+    } finally {
+      setLoading(null);
+    }
+  }
 
   return (
     <section className="py-20 sm:py-24 bg-[#06090f]">
@@ -89,6 +137,8 @@ export function PricingSection() {
           {PRICING.map((plan) => {
             const displayPrice = isAnnual ? plan.annualPrice : plan.price;
             const displayPeriod = isAnnual ? plan.annualPeriod : plan.period;
+            const buttonText = isSignedIn ? plan.ctaSignedIn : plan.cta;
+            const isLoading = loading === plan.plan;
             return (
               <div
                 key={plan.name}
@@ -133,16 +183,17 @@ export function PricingSection() {
                     </li>
                   ))}
                 </ul>
-                <a
-                  href="/sign-up"
-                  className={`block w-full rounded-xl py-3 text-center text-sm font-semibold transition-colors ${
+                <button
+                  onClick={() => handleCheckout(plan.plan)}
+                  disabled={isLoading}
+                  className={`block w-full rounded-xl py-3 text-center text-sm font-semibold transition-colors disabled:opacity-50 ${
                     plan.highlighted
                       ? "bg-blue-600 text-white hover:bg-blue-700"
                       : "border border-white/15 bg-white/5 text-white hover:bg-white/10"
                   }`}
                 >
-                  {plan.cta}
-                </a>
+                  {isLoading ? "Redirecting..." : buttonText}
+                </button>
               </div>
             );
           })}

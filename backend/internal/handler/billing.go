@@ -89,6 +89,13 @@ func (h *BillingHandler) CreateCheckoutSession(w http.ResponseWriter, r *http.Re
 		},
 		SuccessURL: stripe.String(h.cfg.FrontendURL + "/dashboard/billing?success=true"),
 		CancelURL:  stripe.String(h.cfg.FrontendURL + "/dashboard/billing?canceled=true"),
+		SubscriptionData: &stripe.CheckoutSessionSubscriptionDataParams{
+			TrialPeriodDays: stripe.Int64(14),
+			Metadata: map[string]string{
+				"user_id": userID,
+				"plan":    req.Plan,
+			},
+		},
 		Metadata: map[string]string{
 			"user_id": userID,
 			"plan":    req.Plan,
