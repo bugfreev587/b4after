@@ -28,6 +28,7 @@ export default function DashboardPage() {
     api
       .fetch<Comparison[]>("/comparisons")
       .then(setComparisons)
+      .catch((err) => console.error("Failed to load comparisons:", err))
       .finally(() => setLoading(false));
   }, [api]);
 

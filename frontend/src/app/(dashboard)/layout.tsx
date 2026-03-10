@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 import { buttonVariants } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
+import { useApiClient } from "@/lib/api";
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Dashboard" },
@@ -21,6 +23,12 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const api = useApiClient();
+
+  // Ensure user record exists in DB on every dashboard visit
+  useEffect(() => {
+    api.fetch("/users/me").catch(() => {});
+  }, [api]);
 
   return (
     <div className="min-h-screen bg-background">

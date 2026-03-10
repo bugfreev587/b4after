@@ -86,6 +86,7 @@ func CombinedAuthMiddleware(queries *db.Queries) func(http.Handler) http.Handler
 				}
 			}
 
+			log.Printf("[auth] upserting user %s email=%q name=%q", userID, email, name)
 			_, err = queries.UpsertUser(r.Context(), db.UpsertUserParams{
 				ID:        userID,
 				Email:     email,
@@ -93,7 +94,9 @@ func CombinedAuthMiddleware(queries *db.Queries) func(http.Handler) http.Handler
 				AvatarUrl: avatarURL,
 			})
 			if err != nil {
-				log.Printf("failed to upsert user %s: %v", userID, err)
+				log.Printf("[auth] ERROR: failed to upsert user %s: %v", userID, err)
+				writeError(w, http.StatusInternalServerError, "failed to sync user")
+				return
 			}
 
 			ctx := context.WithValue(r.Context(), userIDKey, userID)
