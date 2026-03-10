@@ -1,15 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useApiClient } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { toast } from "sonner";
 
 interface User {
   id: string;
   plan: string;
+}
+
+interface Invoice {
+  id: string;
+  number: string;
+  status: string;
+  amount_due: number;
+  currency: string;
+  created: number;
+  pdf_url: string;
 }
 
 const PLANS_MONTHLY = [
@@ -53,19 +72,91 @@ const PLANS_MONTHLY = [
   },
 ];
 
+function formatCurrency(amount: number, currency: string) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency.toUpperCase(),
+  }).format(amount / 100);
+}
+
+function formatDate(unix: number) {
+  return new Date(unix * 1000).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function statusVariant(status: string) {
+  switch (status) {
+    case "paid":
+      return "default" as const;
+    case "open":
+      return "secondary" as const;
+    default:
+      return "outline" as const;
+  }
+}
+
 export default function BillingPage() {
+  return (
+    <Suspense fallback={<p className="text-muted-foreground">Loading...</p>}>
+      <BillingContent />
+    </Suspense>
+  );
+}
+
+function BillingContent() {
   const api = useApiClient();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [isAnnual, setIsAnnual] = useState(false);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
+
+  const fetchUser = useCallback(() => {
+    return api.fetch<User>("/users/me").then(setUser);
+  }, [api]);
+
+  const fetchInvoices = useCallback(() => {
+    setInvoicesLoading(true);
+    api
+      .fetch<Invoice[]>("/billing/invoices")
+      .then(setInvoices)
+      .catch(() => {})
+      .finally(() => setInvoicesLoading(false));
+  }, [api]);
 
   useEffect(() => {
+    fetchUser().finally(() => setLoading(false));
+    fetchInvoices();
+  }, [fetchUser, fetchInvoices]);
+
+  // Verify checkout session on redirect from Stripe
+  useEffect(() => {
+    const sessionId = searchParams.get("session_id");
+    if (!sessionId) return;
+
     api
-      .fetch<User>("/users/me")
-      .then(setUser)
-      .finally(() => setLoading(false));
-  }, [api]);
+      .fetch<{ plan: string }>("/billing/checkout/verify", {
+        method: "POST",
+        body: JSON.stringify({ session_id: sessionId }),
+      })
+      .then((res) => {
+        toast.success(`Upgraded to ${res.plan.charAt(0).toUpperCase() + res.plan.slice(1)}!`);
+        fetchUser();
+        fetchInvoices();
+      })
+      .catch(() => {
+        toast.error("Failed to verify checkout session");
+      })
+      .finally(() => {
+        router.replace("/dashboard/billing");
+      });
+  }, [searchParams, api, router, fetchUser, fetchInvoices]);
 
   const handleCheckout = async (plan: string) => {
     setCheckoutLoading(plan);
@@ -220,6 +311,62 @@ export default function BillingPage() {
             </Card>
           );
         })}
+      </div>
+
+      {/* Billing History */}
+      <div className="mt-12">
+        <h2 className="text-xl font-bold mb-4">Billing History</h2>
+        {invoicesLoading ? (
+          <p className="text-muted-foreground">Loading invoices...</p>
+        ) : invoices.length === 0 ? (
+          <p className="text-muted-foreground text-sm">No invoices yet.</p>
+        ) : (
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Invoice</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">PDF</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invoices.map((inv) => (
+                  <TableRow key={inv.id}>
+                    <TableCell>{formatDate(inv.created)}</TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {inv.number || "—"}
+                    </TableCell>
+                    <TableCell>
+                      {formatCurrency(inv.amount_due, inv.currency)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={statusVariant(inv.status)} className="capitalize">
+                        {inv.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {inv.pdf_url ? (
+                        <a
+                          href={inv.pdf_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline text-sm"
+                        >
+                          Download
+                        </a>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        )}
       </div>
     </div>
   );

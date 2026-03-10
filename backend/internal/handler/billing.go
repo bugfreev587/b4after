@@ -5,11 +5,13 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stripe/stripe-go/v82"
 	billingportalsession "github.com/stripe/stripe-go/v82/billingportal/session"
 	checkoutsession "github.com/stripe/stripe-go/v82/checkout/session"
+	"github.com/stripe/stripe-go/v82/invoice"
 	"github.com/stripe/stripe-go/v82/webhook"
 
 	"github.com/xiaoboyu/b4after/backend/internal/config"
@@ -87,7 +89,7 @@ func (h *BillingHandler) CreateCheckoutSession(w http.ResponseWriter, r *http.Re
 				Quantity: stripe.Int64(1),
 			},
 		},
-		SuccessURL: stripe.String(h.cfg.FrontendURL + "/dashboard/billing?success=true"),
+		SuccessURL: stripe.String(h.cfg.FrontendURL + "/dashboard/billing?session_id={CHECKOUT_SESSION_ID}"),
 		CancelURL:  stripe.String(h.cfg.FrontendURL + "/dashboard/billing?canceled=true"),
 		SubscriptionData: &stripe.CheckoutSessionSubscriptionDataParams{
 			TrialPeriodDays: stripe.Int64(14),
@@ -217,4 +219,121 @@ func (h *BillingHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+type verifyCheckoutRequest struct {
+	SessionID string `json:"session_id"`
+}
+
+func (h *BillingHandler) VerifyCheckoutSession(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		Error(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	var req verifyCheckoutRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.SessionID == "" {
+		Error(w, http.StatusBadRequest, "session_id is required")
+		return
+	}
+
+	session, err := checkoutsession.Get(req.SessionID, nil)
+	if err != nil {
+		Error(w, http.StatusBadRequest, "invalid session")
+		return
+	}
+
+	if session.Status != stripe.CheckoutSessionStatusComplete {
+		Error(w, http.StatusBadRequest, "checkout not completed")
+		return
+	}
+
+	metaUserID := session.Metadata["user_id"]
+	plan := session.Metadata["plan"]
+	if metaUserID != userID {
+		Error(w, http.StatusForbidden, "session does not belong to user")
+		return
+	}
+
+	if plan == "" {
+		Error(w, http.StatusBadRequest, "no plan in session metadata")
+		return
+	}
+
+	customerID := ""
+	if session.Customer != nil {
+		customerID = session.Customer.ID
+	}
+
+	err = h.queries.UpdateUserPlan(r.Context(), db.UpdateUserPlanParams{
+		ID:               userID,
+		Plan:             db.UserPlan(plan),
+		StripeCustomerID: pgtype.Text{String: customerID, Valid: customerID != ""},
+	})
+	if err != nil {
+		Error(w, http.StatusInternalServerError, "failed to update plan")
+		return
+	}
+
+	JSON(w, http.StatusOK, map[string]string{"plan": plan})
+}
+
+type invoiceResponse struct {
+	ID        string `json:"id"`
+	Number    string `json:"number"`
+	Status    string `json:"status"`
+	AmountDue int64  `json:"amount_due"`
+	Currency  string `json:"currency"`
+	Created   int64  `json:"created"`
+	PDFURL    string `json:"pdf_url"`
+}
+
+func (h *BillingHandler) ListInvoices(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		Error(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	user, err := h.queries.GetUserByID(r.Context(), userID)
+	if err != nil {
+		Error(w, http.StatusInternalServerError, "failed to get user")
+		return
+	}
+
+	if !user.StripeCustomerID.Valid {
+		JSON(w, http.StatusOK, []invoiceResponse{})
+		return
+	}
+
+	params := &stripe.InvoiceListParams{
+		Customer: stripe.String(user.StripeCustomerID.String),
+	}
+	params.Filters.AddFilter("limit", "", "24")
+
+	var invoices []invoiceResponse
+	iter := invoice.List(params)
+	for iter.Next() {
+		inv := iter.Invoice()
+		invoices = append(invoices, invoiceResponse{
+			ID:        inv.ID,
+			Number:    inv.Number,
+			Status:    string(inv.Status),
+			AmountDue: inv.AmountDue,
+			Currency:  string(inv.Currency),
+			Created:   time.Unix(inv.Created, 0).Unix(),
+			PDFURL:    inv.InvoicePDF,
+		})
+	}
+	if err := iter.Err(); err != nil {
+		Error(w, http.StatusInternalServerError, "failed to list invoices")
+		return
+	}
+
+	if invoices == nil {
+		invoices = []invoiceResponse{}
+	}
+
+	JSON(w, http.StatusOK, invoices)
 }

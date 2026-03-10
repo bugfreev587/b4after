@@ -180,6 +180,8 @@ func main() {
 			billingHandler := handler.NewBillingHandler(queries, cfg)
 			r.Post("/api/billing/checkout", billingHandler.CreateCheckoutSession)
 			r.Post("/api/billing/portal", billingHandler.CreatePortalSession)
+			r.Post("/api/billing/checkout/verify", billingHandler.VerifyCheckoutSession)
+			r.Get("/api/billing/invoices", billingHandler.ListInvoices)
 		}
 	})
 
