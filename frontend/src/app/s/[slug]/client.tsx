@@ -70,7 +70,7 @@ export function PublicComparisonClient({
             className="bg-clip-text text-transparent hover:underline"
             style={{ backgroundImage: "var(--gradient-brand)" }}
           >
-            BeforeAfter.io
+            <span style={{ backgroundImage: "linear-gradient(135deg, #833AB4, #E1306C, #F77737)" }} className="bg-clip-text text-transparent font-extrabold">B4</span>After
           </a>
         </div>
       </div>

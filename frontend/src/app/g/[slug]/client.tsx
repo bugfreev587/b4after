@@ -57,7 +57,7 @@ export function GalleryClient({ gallery }: { gallery: Gallery }) {
             href="/"
             className="text-sm text-gray-500 hover:text-gray-400 transition"
           >
-            Powered by BeforeAfter.io
+            Powered by <span style={{ backgroundImage: "linear-gradient(135deg, #833AB4, #E1306C, #F77737)" }} className="bg-clip-text text-transparent font-extrabold">B4</span>After
           </a>
         </div>
       </div>

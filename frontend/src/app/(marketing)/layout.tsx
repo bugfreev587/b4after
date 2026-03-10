@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { UserButton } from "@clerk/nextjs";
+import { Logo } from "@/components/logo";
 
 export default async function MarketingLayout({
   children,
@@ -13,9 +14,7 @@ export default async function MarketingLayout({
     <div className="min-h-screen flex flex-col bg-[#06090f] text-slate-100">
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-slate-950/80 backdrop-blur-md">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 flex items-center justify-between h-14">
-          <Link href="/" className="text-lg font-bold text-white">
-            BeforeAfter.io
-          </Link>
+          <Logo size="small" />
           <nav className="flex items-center gap-4">
             <Link
               href="/#features"
