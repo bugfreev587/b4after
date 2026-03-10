@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -54,4 +56,33 @@ func pgtextToPtr(t pgtype.Text) *string {
 		return nil
 	}
 	return &t.String
+}
+
+// GenerateAPIKey creates or regenerates an API key for the current user (business only).
+func GenerateAPIKey(queries *db.Queries) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, ok := middleware.GetUserIDFromContext(r.Context())
+		if !ok {
+			Error(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+
+		b := make([]byte, 32)
+		if _, err := rand.Read(b); err != nil {
+			Error(w, http.StatusInternalServerError, "failed to generate API key")
+			return
+		}
+		apiKey := "ba_" + hex.EncodeToString(b)
+
+		_, err := queries.SetUserAPIKey(r.Context(), db.SetUserAPIKeyParams{
+			ID:     userID,
+			ApiKey: pgtype.Text{String: apiKey, Valid: true},
+		})
+		if err != nil {
+			Error(w, http.StatusInternalServerError, "failed to save API key")
+			return
+		}
+
+		JSON(w, http.StatusOK, map[string]string{"api_key": apiKey})
+	}
 }

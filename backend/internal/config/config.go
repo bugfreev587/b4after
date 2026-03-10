@@ -22,10 +22,14 @@ type Config struct {
 	R2BucketName      string
 	R2PublicURL       string
 
-	StripeSecretKey          string
-	StripeWebhookSecret      string
+	StripeSecretKey            string
+	StripeWebhookSecret        string
 	StripePriceProMonthly      string
 	StripePriceBusinessMonthly string
+	StripePriceProAnnual       string
+	StripePriceBusinessAnnual  string
+
+	ResendAPIKey string
 
 	CustomDomainBase string
 }
@@ -48,6 +52,10 @@ func Load() (*Config, error) {
 		StripeWebhookSecret:      os.Getenv("STRIPE_WEBHOOK_SECRET"),
 		StripePriceProMonthly:      os.Getenv("STRIPE_PRICE_PRO_MONTHLY"),
 		StripePriceBusinessMonthly: os.Getenv("STRIPE_PRICE_BUSINESS_MONTHLY"),
+		StripePriceProAnnual:       os.Getenv("STRIPE_PRICE_PRO_ANNUAL"),
+		StripePriceBusinessAnnual:  os.Getenv("STRIPE_PRICE_BUSINESS_ANNUAL"),
+
+		ResendAPIKey: os.Getenv("RESEND_API_KEY"),
 
 		CustomDomainBase: getEnv("CUSTOM_DOMAIN_BASE", "beforeafter.io"),
 	}

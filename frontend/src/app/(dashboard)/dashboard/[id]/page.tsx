@@ -32,8 +32,17 @@ interface AnalyticsSummary {
   daily_views: { date: string; count: number }[];
 }
 
+interface AdvancedAnalytics {
+  devices: { device: string; count: number }[];
+  referrers: { referrer: string; count: number }[];
+  countries: { country: string; count: number }[];
+  conversion_rate: number;
+}
+
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
 export default function ComparisonDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -42,9 +51,13 @@ export default function ComparisonDetailPage() {
   const { getToken } = useAuth();
   const [comp, setComp] = useState<Comparison | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
+  const [advancedAnalytics, setAdvancedAnalytics] =
+    useState<AdvancedAnalytics | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageLoading, setImageLoading] = useState(false);
+  const [imageLayout, setImageLayout] = useState("side-by-side");
+  const [imageAspectRatio, setImageAspectRatio] = useState("original");
   const [videoLoading, setVideoLoading] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoFormat, setVideoFormat] = useState("square");
@@ -68,6 +81,18 @@ export default function ComparisonDetailPage() {
       setComp(c);
       setAnalytics(a);
       setUser(u);
+
+      // Fetch advanced analytics for pro+ users
+      if (u.plan === "pro" || u.plan === "business") {
+        try {
+          const adv = await api.fetch<AdvancedAnalytics>(
+            `/analytics/${id}/advanced`
+          );
+          setAdvancedAnalytics(adv);
+        } catch {
+          // Advanced analytics not available
+        }
+      }
     } catch {
       toast.error("Failed to load comparison");
     } finally {
@@ -89,7 +114,7 @@ export default function ComparisonDetailPage() {
       fetchData();
     } catch (err: unknown) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to update comparison",
+        err instanceof Error ? err.message : "Failed to update comparison"
       );
     }
   };
@@ -109,9 +134,12 @@ export default function ComparisonDetailPage() {
     setImageLoading(true);
     try {
       const token = await getToken();
-      const API_URL =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
-      const res = await fetch(`${API_URL}/comparisons/${id}/image`, {
+      const params = new URLSearchParams();
+      if (imageLayout !== "side-by-side") params.set("layout", imageLayout);
+      if (imageAspectRatio !== "original")
+        params.set("aspect_ratio", imageAspectRatio);
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const res = await fetch(`${API_URL}/comparisons/${id}/image${qs}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -199,10 +227,31 @@ export default function ComparisonDetailPage() {
     }
   };
 
+  const handleExportCSV = async () => {
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_URL}/analytics/${id}/export`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to export");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `analytics-${id}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("CSV downloaded!");
+    } catch {
+      toast.error("Failed to export CSV");
+    }
+  };
+
   if (loading) return <p className="text-muted-foreground">Loading...</p>;
   if (!comp) return <p>Comparison not found</p>;
 
   const isPro = user?.plan === "pro" || user?.plan === "business";
+  const isBusiness = user?.plan === "business";
   const hasProcessImages = (comp.process_images?.length ?? 0) >= 3;
 
   const publicURL = `${APP_URL}/s/${comp.slug}`;
@@ -242,10 +291,7 @@ export default function ComparisonDetailPage() {
               </h3>
               <div className="flex gap-3 overflow-x-auto pb-2">
                 {comp.process_images.map((pi, idx) => (
-                  <div
-                    key={idx}
-                    className="flex-shrink-0 w-28"
-                  >
+                  <div key={idx} className="flex-shrink-0 w-28">
                     <div className="aspect-square rounded-md overflow-hidden border border-white/10">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
@@ -299,6 +345,121 @@ export default function ComparisonDetailPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Advanced analytics for pro+ */}
+          {isPro && advancedAnalytics && (
+            <div className="space-y-6">
+              {advancedAnalytics.conversion_rate > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-muted-foreground">
+                      CTA Conversion Rate
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold">
+                      {advancedAnalytics.conversion_rate.toFixed(1)}%
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Devices */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">By Device</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {advancedAnalytics.devices.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No data yet
+                      </p>
+                    ) : (
+                      <ul className="space-y-1">
+                        {advancedAnalytics.devices.map((d) => (
+                          <li
+                            key={d.device}
+                            className="flex justify-between text-sm"
+                          >
+                            <span className="capitalize">{d.device}</span>
+                            <span className="text-muted-foreground">
+                              {d.count}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Referrers */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Top Referrers</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {advancedAnalytics.referrers.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No data yet
+                      </p>
+                    ) : (
+                      <ul className="space-y-1">
+                        {advancedAnalytics.referrers.slice(0, 5).map((r) => (
+                          <li
+                            key={r.referrer}
+                            className="flex justify-between text-sm"
+                          >
+                            <span className="truncate max-w-[120px]">
+                              {r.referrer}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {r.count}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Countries */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Top Countries</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {advancedAnalytics.countries.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No data yet
+                      </p>
+                    ) : (
+                      <ul className="space-y-1">
+                        {advancedAnalytics.countries.slice(0, 5).map((c) => (
+                          <li
+                            key={c.country}
+                            className="flex justify-between text-sm"
+                          >
+                            <span>{c.country}</span>
+                            <span className="text-muted-foreground">
+                              {c.count}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* CSV Export for business */}
+              {isBusiness && (
+                <Button variant="outline" onClick={handleExportCSV}>
+                  Export CSV
+                </Button>
+              )}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="export" className="mt-4 space-y-6 max-w-xl">
@@ -306,13 +467,33 @@ export default function ComparisonDetailPage() {
             <CardHeader>
               <CardTitle className="text-lg">Download Image</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground mb-3">
-                Download a side-by-side comparison image (PNG)
+                Download a comparison image (PNG)
               </p>
-              <Button onClick={handleDownloadImage} disabled={imageLoading}>
-                {imageLoading ? "Generating..." : "Download Image"}
-              </Button>
+              <div className="flex gap-2 items-center flex-wrap">
+                <select
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={imageLayout}
+                  onChange={(e) => setImageLayout(e.target.value)}
+                >
+                  <option value="side-by-side">Side-by-Side</option>
+                  <option value="stacked">Stacked</option>
+                </select>
+                <select
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={imageAspectRatio}
+                  onChange={(e) => setImageAspectRatio(e.target.value)}
+                >
+                  <option value="original">Original</option>
+                  <option value="1:1">1:1</option>
+                  <option value="4:5">4:5</option>
+                  <option value="9:16">9:16</option>
+                </select>
+                <Button onClick={handleDownloadImage} disabled={imageLoading}>
+                  {imageLoading ? "Generating..." : "Download Image"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -371,6 +552,7 @@ export default function ComparisonDetailPage() {
               )}
             </CardContent>
           </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">AI Transform Video</CardTitle>

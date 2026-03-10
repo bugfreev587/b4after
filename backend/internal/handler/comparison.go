@@ -67,6 +67,16 @@ func (h *ComparisonHandler) Create(w http.ResponseWriter, r *http.Request) {
 		req.Category = "other"
 	}
 
+	// Enforce free plan limit: 3 comparisons
+	user, err := h.queries.GetUserByID(r.Context(), userID)
+	if err == nil && user.Plan == db.UserPlanFree {
+		count, err := h.queries.CountComparisonsByUserID(r.Context(), userID)
+		if err == nil && count >= 3 {
+			Error(w, http.StatusForbidden, "free plan is limited to 3 comparisons — upgrade to create more")
+			return
+		}
+	}
+
 	slug := service.GenerateSlug(req.Title)
 
 	comp, err := h.queries.CreateComparison(r.Context(), db.CreateComparisonParams{

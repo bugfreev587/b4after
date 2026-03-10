@@ -28,7 +28,8 @@ func NewBillingHandler(queries *db.Queries, cfg *config.Config) *BillingHandler 
 }
 
 type checkoutRequest struct {
-	Plan string `json:"plan"`
+	Plan     string `json:"plan"`
+	Interval string `json:"interval"` // "monthly" (default) or "annual"
 }
 
 func (h *BillingHandler) CreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
@@ -44,12 +45,24 @@ func (h *BillingHandler) CreateCheckoutSession(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	if req.Interval == "" {
+		req.Interval = "monthly"
+	}
+
 	var priceID string
 	switch req.Plan {
 	case "pro":
-		priceID = h.cfg.StripePriceProMonthly
+		if req.Interval == "annual" {
+			priceID = h.cfg.StripePriceProAnnual
+		} else {
+			priceID = h.cfg.StripePriceProMonthly
+		}
 	case "business":
-		priceID = h.cfg.StripePriceBusinessMonthly
+		if req.Interval == "annual" {
+			priceID = h.cfg.StripePriceBusinessAnnual
+		} else {
+			priceID = h.cfg.StripePriceBusinessMonthly
+		}
 	default:
 		Error(w, http.StatusBadRequest, "invalid plan")
 		return

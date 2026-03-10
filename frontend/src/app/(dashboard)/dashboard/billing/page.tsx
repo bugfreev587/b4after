@@ -12,19 +12,21 @@ interface User {
   plan: string;
 }
 
-const PLANS = [
+const PLANS_MONTHLY = [
   {
     name: "Free",
     key: "free",
     price: "$0",
     period: "forever",
-    features: ["5 comparisons", "Public pages", "Basic analytics"],
+    features: ["3 comparisons", "Public pages", "Basic analytics"],
   },
   {
     name: "Pro",
     key: "pro",
     price: "$15",
     period: "/month",
+    annualPrice: "$12",
+    annualPeriod: "/mo ($144/yr)",
     features: [
       "Unlimited comparisons",
       "Video export",
@@ -39,6 +41,8 @@ const PLANS = [
     key: "business",
     price: "$39",
     period: "/month",
+    annualPrice: "$32",
+    annualPeriod: "/mo ($384/yr)",
     features: [
       "Everything in Pro",
       "Team members",
@@ -54,6 +58,7 @@ export default function BillingPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [isAnnual, setIsAnnual] = useState(false);
 
   useEffect(() => {
     api
@@ -67,7 +72,10 @@ export default function BillingPage() {
     try {
       const { url } = await api.fetch<{ url: string }>("/billing/checkout", {
         method: "POST",
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({
+          plan,
+          interval: isAnnual ? "annual" : "monthly",
+        }),
       });
       window.location.href = url;
     } catch {
@@ -112,17 +120,40 @@ export default function BillingPage() {
         )}
       </div>
 
+      {/* Annual toggle */}
+      <div className="flex items-center justify-center gap-3 mb-8">
+        <span
+          className={`text-sm font-medium ${!isAnnual ? "text-foreground" : "text-muted-foreground"}`}
+        >
+          Monthly
+        </span>
+        <button
+          onClick={() => setIsAnnual(!isAnnual)}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isAnnual ? "bg-primary" : "bg-muted"}`}
+        >
+          <span
+            className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${isAnnual ? "translate-x-6" : "translate-x-1"}`}
+          />
+        </button>
+        <span
+          className={`text-sm font-medium ${isAnnual ? "text-foreground" : "text-muted-foreground"}`}
+        >
+          Annual{" "}
+          <span className="text-xs text-green-500 font-semibold">Save 20%</span>
+        </span>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {PLANS.map((plan) => {
+        {PLANS_MONTHLY.map((plan) => {
           const isCurrent = currentPlan === plan.key;
+          const displayPrice =
+            isAnnual && plan.annualPrice ? plan.annualPrice : plan.price;
+          const displayPeriod =
+            isAnnual && plan.annualPeriod ? plan.annualPeriod : plan.period;
           return (
             <Card
               key={plan.key}
-              className={
-                plan.highlighted
-                  ? "ring-2 ring-primary"
-                  : ""
-              }
+              className={plan.highlighted ? "ring-2 ring-primary" : ""}
             >
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -130,8 +161,8 @@ export default function BillingPage() {
                   {isCurrent && <Badge>Current</Badge>}
                 </div>
                 <div className="mt-2">
-                  <span className="text-3xl font-bold">{plan.price}</span>
-                  <span className="text-muted-foreground">{plan.period}</span>
+                  <span className="text-3xl font-bold">{displayPrice}</span>
+                  <span className="text-muted-foreground">{displayPeriod}</span>
                 </div>
               </CardHeader>
               <CardContent>

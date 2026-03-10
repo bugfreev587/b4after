@@ -51,7 +51,7 @@ const PRICING = [
     name: "Free",
     price: "$0",
     period: "forever",
-    features: ["5 comparisons", "Public pages", "Basic analytics"],
+    features: ["3 comparisons", "Public pages", "Basic analytics"],
     cta: "Get Started",
     highlighted: false,
   },
@@ -96,7 +96,7 @@ const FAQ = [
   },
   {
     q: "Is there a free plan?",
-    a: "Yes, you can create up to 5 comparisons for free with no time limit.",
+    a: "Yes, you can create up to 3 comparisons for free with no time limit.",
   },
   {
     q: "Can I export videos?",
@@ -196,7 +196,7 @@ export default function HomePage() {
       </section>
 
       {/* Features */}
-      <section className="py-20 sm:py-24 bg-[#070d18]">
+      <section id="features" className="py-20 sm:py-24 bg-[#070d18]">
         <div className="mx-auto max-w-5xl px-4 sm:px-6">
           <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 text-white">
             Everything You Need

@@ -1,3 +1,4 @@
+import { Metadata } from "next";
 import { GalleryClient } from "./client";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
@@ -29,6 +30,37 @@ async function getGallery(slug: string): Promise<Gallery | null> {
   } catch {
     return null;
   }
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const gallery = await getGallery(slug);
+  if (!gallery) {
+    return { title: "Gallery Not Found" };
+  }
+
+  const ogImage =
+    gallery.comparisons.length > 0
+      ? gallery.comparisons[0].before_image_url
+      : undefined;
+
+  return {
+    title: `${gallery.title} | BeforeAfter.io`,
+    description:
+      gallery.description ||
+      `Before & after gallery: ${gallery.title}`,
+    openGraph: {
+      title: gallery.title,
+      description:
+        gallery.description ||
+        `Before & after gallery with ${gallery.comparisons.length} comparisons`,
+      ...(ogImage ? { images: [{ url: ogImage }] } : {}),
+    },
+  };
 }
 
 export default async function GalleryPage({

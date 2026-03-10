@@ -9,15 +9,18 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/xiaoboyu/b4after/backend/internal/db"
+	"github.com/xiaoboyu/b4after/backend/internal/email"
 	"github.com/xiaoboyu/b4after/backend/internal/middleware"
 )
 
 type TeamHandler struct {
-	queries *db.Queries
+	queries     *db.Queries
+	emailClient *email.Client
+	frontendURL string
 }
 
-func NewTeamHandler(queries *db.Queries) *TeamHandler {
-	return &TeamHandler{queries: queries}
+func NewTeamHandler(queries *db.Queries, emailClient *email.Client, frontendURL string) *TeamHandler {
+	return &TeamHandler{queries: queries, emailClient: emailClient, frontendURL: frontendURL}
 }
 
 type inviteMemberRequest struct {
@@ -74,6 +77,16 @@ func (h *TeamHandler) InviteMember(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to add team member")
 		return
+	}
+
+	// Send invitation email
+	if h.emailClient != nil {
+		owner, _ := h.queries.GetUserByID(r.Context(), userID)
+		ownerName := owner.Name
+		if ownerName == "" {
+			ownerName = owner.Email
+		}
+		h.emailClient.SendTeamInvite(invitee.Email, ownerName, h.frontendURL+"/dashboard")
 	}
 
 	JSON(w, http.StatusCreated, teamMemberResponse(member, invitee.Email, invitee.Name))

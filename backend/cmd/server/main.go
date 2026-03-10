@@ -10,8 +10,11 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 
+	"golang.org/x/time/rate"
+
 	"github.com/xiaoboyu/b4after/backend/internal/config"
 	"github.com/xiaoboyu/b4after/backend/internal/db"
+	"github.com/xiaoboyu/b4after/backend/internal/email"
 	"github.com/xiaoboyu/b4after/backend/internal/handler"
 	"github.com/xiaoboyu/b4after/backend/internal/middleware"
 	"github.com/xiaoboyu/b4after/backend/internal/storage"
@@ -48,6 +51,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
+	r.Use(middleware.RateLimitMiddleware(rate.Limit(20), 40)) // 20 req/s per IP, burst 40
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   cfg.FrontendURLs,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -82,9 +86,9 @@ func main() {
 		r.Post("/api/webhooks/stripe", billingHandler.HandleWebhook)
 	}
 
-	// Protected routes
+	// Protected routes (combined auth: API key or Clerk JWT)
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.ClerkAuthMiddleware(queries))
+		r.Use(middleware.CombinedAuthMiddleware(queries))
 
 		// User
 		userHandler := handler.NewUserHandler(queries)
@@ -122,6 +126,17 @@ func main() {
 		// Analytics
 		r.Get("/api/analytics/{comparisonId}", analyticsHandler.GetSummary)
 
+		// Advanced analytics (pro/business)
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.RequirePlan(queries, db.UserPlanPro, db.UserPlanBusiness))
+			r.Get("/api/analytics/{comparisonId}/advanced", analyticsHandler.GetAdvancedAnalytics)
+		})
+		// CSV export (business only)
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.RequirePlan(queries, db.UserPlanBusiness))
+			r.Get("/api/analytics/{comparisonId}/export", analyticsHandler.ExportCSV)
+		})
+
 		// Brands (pro/business only)
 		brandHandler := handler.NewBrandHandler(queries)
 		r.Group(func(r chi.Router) {
@@ -141,7 +156,8 @@ func main() {
 		r.Delete("/api/galleries/{id}/comparisons/{compId}", galleryHandler.RemoveComparison)
 
 		// Teams (business only)
-		teamHandler := handler.NewTeamHandler(queries)
+		emailClient := email.NewClient(cfg.ResendAPIKey)
+		teamHandler := handler.NewTeamHandler(queries, emailClient, cfg.FrontendURL)
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.RequirePlan(queries, db.UserPlanBusiness))
 			r.Post("/api/team/members", teamHandler.InviteMember)
@@ -156,6 +172,7 @@ func main() {
 			r.Use(middleware.RequirePlan(queries, db.UserPlanBusiness))
 			r.Get("/api/settings/subdomain", subdomainHandler.Get)
 			r.Post("/api/settings/subdomain", subdomainHandler.Update)
+			r.Post("/api/settings/api-key", handler.GenerateAPIKey(queries))
 		})
 
 		// Billing

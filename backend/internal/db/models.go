@@ -307,4 +307,5 @@ type User struct {
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 	CustomSubdomain  pgtype.Text        `json:"custom_subdomain"`
+	ApiKey           pgtype.Text        `json:"api_key"`
 }

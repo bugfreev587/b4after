@@ -76,6 +76,142 @@ func (q *Queries) GetEventCountsByComparison(ctx context.Context, comparisonID p
 	return items, nil
 }
 
+const getEventCountsByCountry = `-- name: GetEventCountsByCountry :many
+SELECT country, COUNT(*)::int as count
+FROM analytics
+WHERE comparison_id = $1 AND country IS NOT NULL AND country != ''
+GROUP BY country
+ORDER BY count DESC
+LIMIT 20
+`
+
+type GetEventCountsByCountryRow struct {
+	Country pgtype.Text `json:"country"`
+	Count   int32       `json:"count"`
+}
+
+func (q *Queries) GetEventCountsByCountry(ctx context.Context, comparisonID pgtype.UUID) ([]GetEventCountsByCountryRow, error) {
+	rows, err := q.db.Query(ctx, getEventCountsByCountry, comparisonID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetEventCountsByCountryRow{}
+	for rows.Next() {
+		var i GetEventCountsByCountryRow
+		if err := rows.Scan(&i.Country, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getEventCountsByDevice = `-- name: GetEventCountsByDevice :many
+SELECT device::text as device, COUNT(*)::int as count
+FROM analytics
+WHERE comparison_id = $1 AND device IS NOT NULL
+GROUP BY device
+ORDER BY count DESC
+`
+
+type GetEventCountsByDeviceRow struct {
+	Device string `json:"device"`
+	Count  int32  `json:"count"`
+}
+
+func (q *Queries) GetEventCountsByDevice(ctx context.Context, comparisonID pgtype.UUID) ([]GetEventCountsByDeviceRow, error) {
+	rows, err := q.db.Query(ctx, getEventCountsByDevice, comparisonID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetEventCountsByDeviceRow{}
+	for rows.Next() {
+		var i GetEventCountsByDeviceRow
+		if err := rows.Scan(&i.Device, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getEventCountsByReferrer = `-- name: GetEventCountsByReferrer :many
+SELECT referrer, COUNT(*)::int as count
+FROM analytics
+WHERE comparison_id = $1 AND referrer IS NOT NULL AND referrer != ''
+GROUP BY referrer
+ORDER BY count DESC
+LIMIT 20
+`
+
+type GetEventCountsByReferrerRow struct {
+	Referrer pgtype.Text `json:"referrer"`
+	Count    int32       `json:"count"`
+}
+
+func (q *Queries) GetEventCountsByReferrer(ctx context.Context, comparisonID pgtype.UUID) ([]GetEventCountsByReferrerRow, error) {
+	rows, err := q.db.Query(ctx, getEventCountsByReferrer, comparisonID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetEventCountsByReferrerRow{}
+	for rows.Next() {
+		var i GetEventCountsByReferrerRow
+		if err := rows.Scan(&i.Referrer, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listEventsByComparison = `-- name: ListEventsByComparison :many
+SELECT id, comparison_id, event_type, device, referrer, country, created_at
+FROM analytics
+WHERE comparison_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListEventsByComparison(ctx context.Context, comparisonID pgtype.UUID) ([]Analytic, error) {
+	rows, err := q.db.Query(ctx, listEventsByComparison, comparisonID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Analytic{}
+	for rows.Next() {
+		var i Analytic
+		if err := rows.Scan(
+			&i.ID,
+			&i.ComparisonID,
+			&i.EventType,
+			&i.Device,
+			&i.Referrer,
+			&i.Country,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const recordEvent = `-- name: RecordEvent :exec
 INSERT INTO analytics (comparison_id, event_type, device, referrer, country)
 VALUES ($1, $2, $3, $4, $5)

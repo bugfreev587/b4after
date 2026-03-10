@@ -28,7 +28,18 @@ var videoFormats = map[string]VideoFormat{
 	"landscape": {1920, 1080},
 }
 
+// VideoOptions controls watermark and branding for video generation.
+type VideoOptions struct {
+	WatermarkText string
+	BrandLogoPath string // local path to logo file (downloaded by caller)
+}
+
+
 func GenerateComparisonVideo(beforeURL, afterURL, format string) (string, error) {
+	return GenerateComparisonVideoWithOptions(beforeURL, afterURL, format, VideoOptions{})
+}
+
+func GenerateComparisonVideoWithOptions(beforeURL, afterURL, format string, opts VideoOptions) (string, error) {
 	vf, ok := videoFormats[format]
 	if !ok {
 		vf = videoFormats["square"]
@@ -78,6 +89,12 @@ func GenerateComparisonVideo(beforeURL, afterURL, format string) (string, error)
 		vf.Width, vf.Height, vf.Width, vf.Height,
 	)
 
+	// Add watermark text overlay if specified
+	if opts.WatermarkText != "" {
+		escaped := strings.ReplaceAll(opts.WatermarkText, "'", "'\\''")
+		filterComplex += fmt.Sprintf("[out];[out]drawtext=text='%s':fontsize=24:fontcolor=white@0.4:x=w-tw-10:y=h-th-10", escaped)
+	}
+
 	cmd := exec.Command("ffmpeg",
 		"-loop", "1", "-t", "3.5", "-i", beforePath,
 		"-loop", "1", "-t", "3.5", "-i", afterPath,
@@ -99,6 +116,10 @@ func GenerateComparisonVideo(beforeURL, afterURL, format string) (string, error)
 }
 
 func GenerateTransformationVideo(beforeURL, afterURL, format string) (string, error) {
+	return GenerateTransformationVideoWithOptions(beforeURL, afterURL, format, VideoOptions{})
+}
+
+func GenerateTransformationVideoWithOptions(beforeURL, afterURL, format string, opts VideoOptions) (string, error) {
 	vf, ok := videoFormats[format]
 	if !ok {
 		vf = videoFormats["square"]
@@ -144,6 +165,11 @@ func GenerateTransformationVideo(beforeURL, afterURL, format string) (string, er
 		vf.Width, vf.Height, vf.Width, vf.Height,
 		vf.Width, vf.Height, vf.Width, vf.Height,
 	)
+
+	if opts.WatermarkText != "" {
+		escaped := strings.ReplaceAll(opts.WatermarkText, "'", "'\\''")
+		filterComplex += fmt.Sprintf("[out];[out]drawtext=text='%s':fontsize=24:fontcolor=white@0.4:x=w-tw-10:y=h-th-10", escaped)
+	}
 
 	cmd := exec.Command("ffmpeg",
 		"-loop", "1", "-t", "4", "-i", beforePath,

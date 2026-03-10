@@ -17,6 +17,24 @@ export default async function MarketingLayout({
             BeforeAfter.io
           </Link>
           <nav className="flex items-center gap-4">
+            <Link
+              href="/#features"
+              className="hidden sm:block text-sm font-medium text-slate-300 hover:text-white transition-colors"
+            >
+              Features
+            </Link>
+            <Link
+              href="/pricing"
+              className="hidden sm:block text-sm font-medium text-slate-300 hover:text-white transition-colors"
+            >
+              Pricing
+            </Link>
+            <Link
+              href="/examples"
+              className="hidden sm:block text-sm font-medium text-slate-300 hover:text-white transition-colors"
+            >
+              Examples
+            </Link>
             {userId ? (
               <>
                 <Link
@@ -47,9 +65,49 @@ export default async function MarketingLayout({
         </div>
       </header>
       <main className="flex-1 pt-14">{children}</main>
-      <footer className="border-t border-white/10 bg-[#04070d] py-10">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 text-center text-sm text-slate-500">
-          &copy; {new Date().getFullYear()} BeforeAfter.io. All rights reserved.
+      <footer className="border-t border-white/10 bg-[#04070d] py-12">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <h3 className="text-sm font-semibold text-white mb-3">Product</h3>
+              <ul className="space-y-2 text-sm text-slate-400">
+                <li>
+                  <Link href="/#features" className="hover:text-white transition-colors">
+                    Features
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/pricing" className="hover:text-white transition-colors">
+                    Pricing
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/examples" className="hover:text-white transition-colors">
+                    Examples
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-white mb-3">Legal</h3>
+              <ul className="space-y-2 text-sm text-slate-400">
+                <li>
+                  <span className="hover:text-white transition-colors cursor-default">
+                    Privacy Policy
+                  </span>
+                </li>
+                <li>
+                  <span className="hover:text-white transition-colors cursor-default">
+                    Terms of Service
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-white/10 pt-6 text-center text-sm text-slate-500">
+            &copy; {new Date().getFullYear()} BeforeAfter.io. All rights
+            reserved.
+          </div>
         </div>
       </footer>
     </div>
