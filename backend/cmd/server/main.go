@@ -51,7 +51,6 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
-	r.Use(middleware.RateLimitMiddleware(rate.Limit(20), 40)) // 20 req/s per IP, burst 40
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   cfg.FrontendURLs,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -59,6 +58,7 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
+	r.Use(middleware.RateLimitMiddleware(rate.Limit(20), 40)) // 20 req/s per IP, burst 40
 
 	r.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
 		handler.JSON(w, http.StatusOK, map[string]string{"status": "ok"})
