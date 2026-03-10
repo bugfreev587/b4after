@@ -27,7 +27,7 @@ export default function DashboardLayout({
       <header className="bg-[#1A1425] border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
           <div className="flex items-center gap-8">
-            <Logo href="/dashboard" size="small" />
+            <Logo href="/" size="small" />
             <nav className="hidden md:flex items-center gap-1">
               {NAV_LINKS.map((link) => {
                 const isActive =
