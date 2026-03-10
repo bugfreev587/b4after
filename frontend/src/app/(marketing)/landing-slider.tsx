@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { BeforeAfterSlider } from "@/components/before-after-slider";
 
@@ -34,10 +34,43 @@ const slides = [
 
 export function LandingSlider() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [sliding, setSliding] = useState(false);
+  const [direction, setDirection] = useState<"left" | "right">("left");
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const goTo = useCallback((index: number) => {
-    setActiveIndex((index + slides.length) % slides.length);
-  }, []);
+  const goTo = useCallback(
+    (index: number, dir: "left" | "right" = "left") => {
+      if (sliding) return;
+      setDirection(dir);
+      setSliding(true);
+      setTimeout(() => {
+        setActiveIndex((index + slides.length) % slides.length);
+        setSliding(false);
+      }, 400);
+    },
+    [sliding]
+  );
+
+  const goNext = useCallback(() => {
+    goTo(activeIndex + 1, "left");
+  }, [activeIndex, goTo]);
+
+  const goPrev = useCallback(() => {
+    goTo(activeIndex - 1, "right");
+  }, [activeIndex, goTo]);
+
+  // Auto-advance every 3 seconds
+  useEffect(() => {
+    timerRef.current = setInterval(goNext, 3000);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [goNext]);
+
+  const resetTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(goNext, 3000);
+  }, [goNext]);
 
   return (
     <div className="relative w-full">
@@ -48,48 +81,71 @@ export function LandingSlider() {
         </span>
       </div>
 
-      {/* Slider area with arrows */}
-      <div className="relative group">
+      {/* Slider area with arrows on the sides */}
+      <div className="flex items-center gap-2 sm:gap-4">
         {/* Left arrow */}
         <button
-          onClick={() => goTo(activeIndex - 1)}
-          className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white shadow-md rounded-full p-1.5 sm:p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={() => {
+            goPrev();
+            resetTimer();
+          }}
+          className="shrink-0 hover:scale-110 transition-transform"
           aria-label="Previous slide"
         >
-          <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
-        </button>
-
-        {/* Right arrow */}
-        <button
-          onClick={() => goTo(activeIndex + 1)}
-          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white shadow-md rounded-full p-1.5 sm:p-2 opacity-0 group-hover:opacity-100 transition-opacity"
-          aria-label="Next slide"
-        >
-          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
+          <ChevronLeft
+            className="w-10 h-10 sm:w-12 sm:h-12 text-gray-500/60 hover:text-gray-300 transition-colors"
+            strokeWidth={3}
+          />
         </button>
 
         {/* Slides */}
-        <div className="relative overflow-hidden rounded-lg">
-          {slides.map((slide, i) => (
-            <div
-              key={slide.label}
-              className="transition-opacity duration-500"
-              style={{
-                opacity: i === activeIndex ? 1 : 0,
-                position: i === activeIndex ? "relative" : "absolute",
-                inset: i === activeIndex ? undefined : 0,
-                pointerEvents: i === activeIndex ? "auto" : "none",
-              }}
-            >
-              <BeforeAfterSlider
-                beforeImage={slide.beforeImage}
-                afterImage={slide.afterImage}
-                beforeLabel="Before"
-                afterLabel="After"
-              />
-            </div>
-          ))}
+        <div className="relative overflow-hidden rounded-lg flex-1 min-w-0">
+          {slides.map((slide, i) => {
+            const isActive = i === activeIndex;
+            let animClass = "";
+            if (sliding && isActive) {
+              animClass =
+                direction === "left"
+                  ? "animate-slide-out-left"
+                  : "animate-slide-out-right";
+            }
+
+            return (
+              <div
+                key={slide.label}
+                className={`transition-opacity duration-400 ${animClass}`}
+                style={{
+                  opacity: isActive ? 1 : 0,
+                  position: isActive ? "relative" : "absolute",
+                  inset: isActive ? undefined : 0,
+                  pointerEvents: isActive ? "auto" : "none",
+                }}
+              >
+                <BeforeAfterSlider
+                  beforeImage={slide.beforeImage}
+                  afterImage={slide.afterImage}
+                  beforeLabel="Before"
+                  afterLabel="After"
+                />
+              </div>
+            );
+          })}
         </div>
+
+        {/* Right arrow */}
+        <button
+          onClick={() => {
+            goNext();
+            resetTimer();
+          }}
+          className="shrink-0 hover:scale-110 transition-transform"
+          aria-label="Next slide"
+        >
+          <ChevronRight
+            className="w-10 h-10 sm:w-12 sm:h-12 text-gray-500/60 hover:text-gray-300 transition-colors"
+            strokeWidth={3}
+          />
+        </button>
       </div>
 
       {/* Dot indicators */}
@@ -97,7 +153,11 @@ export function LandingSlider() {
         {slides.map((slide, i) => (
           <button
             key={slide.label}
-            onClick={() => setActiveIndex(i)}
+            onClick={() => {
+              const dir = i > activeIndex ? "left" : "right";
+              goTo(i, dir);
+              resetTimer();
+            }}
             className={`rounded-full transition-all ${
               i === activeIndex
                 ? "w-3 h-3 bg-primary"

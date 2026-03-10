@@ -126,7 +126,7 @@ export default function HomePage() {
             </a>
           </div>
 
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-4xl mx-auto">
             <LandingSlider />
           </div>
         </div>
