@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useApiClient } from "@/lib/api";
 import { ImageUpload } from "@/components/image-upload";
 import {
@@ -14,39 +14,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
-
-interface Space {
-  id: string;
-  name: string;
-}
 
 interface CreateComparisonModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  spaces: Space[];
-  defaultSpaceId?: string;
   onCreated: () => void;
 }
 
 export function CreateComparisonModal({
   open,
   onOpenChange,
-  spaces,
-  defaultSpaceId,
   onCreated,
 }: CreateComparisonModalProps) {
   const api = useApiClient();
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({
-    space_id: defaultSpaceId || "",
     title: "",
     description: "",
     category: "",
@@ -54,12 +37,6 @@ export function CreateComparisonModal({
     before_image_url: "",
     after_image_url: "",
   });
-
-  useEffect(() => {
-    if (open && defaultSpaceId) {
-      setForm((f) => ({ ...f, space_id: defaultSpaceId }));
-    }
-  }, [open, defaultSpaceId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,12 +59,10 @@ export function CreateComparisonModal({
           cta_text: form.cta_text,
           before_image_url: form.before_image_url,
           after_image_url: form.after_image_url,
-          space_id: form.space_id || undefined,
         }),
       });
-      toast.success("Comparison created!");
+      toast.success("Comparison created! Drag it to a space to publish.");
       setForm({
-        space_id: defaultSpaceId || "",
         title: "",
         description: "",
         category: "",
@@ -112,32 +87,12 @@ export function CreateComparisonModal({
         <DialogHeader>
           <DialogTitle>Create Comparison</DialogTitle>
           <DialogDescription>
-            Upload before and after photos to create a new comparison
+            Upload before and after photos. The new comparison will appear in
+            your library — drag it to a space when ready.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Space (optional)</Label>
-            <Select
-              value={form.space_id}
-              onValueChange={(v) => {
-                if (v) setForm((f) => ({ ...f, space_id: v }));
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="No space (add to library)" />
-              </SelectTrigger>
-              <SelectContent>
-                {spaces.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <ImageUpload

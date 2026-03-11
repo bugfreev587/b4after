@@ -84,7 +84,6 @@ export default function WorkspacePage() {
 
   // Modal states
   const [createOpen, setCreateOpen] = useState(false);
-  const [createDefaultSpaceId, setCreateDefaultSpaceId] = useState<string>();
   const [settingsSpace, setSettingsSpace] = useState<Space | null>(null);
   const [detailComparison, setDetailComparison] = useState<Comparison | null>(
     null,
@@ -228,10 +227,7 @@ export default function WorkspacePage() {
           <h1 className="text-2xl font-bold">Galleries</h1>
           <Button
             variant="outline"
-            onClick={() => {
-              setCreateDefaultSpaceId(undefined);
-              setCreateOpen(true);
-            }}
+            onClick={() => setCreateOpen(true)}
           >
             <Plus className="w-4 h-4 mr-1" />
             Create Comparison
@@ -257,7 +253,6 @@ export default function WorkspacePage() {
                 if (unassignedComparisons.length > 0) {
                   setAddPickerSpaceId(space.id);
                 } else {
-                  setCreateDefaultSpaceId(space.id);
                   setCreateOpen(true);
                 }
               }}
@@ -395,8 +390,6 @@ export default function WorkspacePage() {
       <CreateComparisonModal
         open={createOpen}
         onOpenChange={setCreateOpen}
-        spaces={spaces}
-        defaultSpaceId={createDefaultSpaceId}
         onCreated={loadData}
       />
 
