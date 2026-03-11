@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useUser, useClerk, UserProfile } from "@clerk/nextjs";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import { useApiClient } from "@/lib/api";
 import { TenantProvider, useTenant } from "@/lib/tenant-context";
+import { RequestModal } from "@/components/request-modal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +46,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const { tenant, isOwner, plan } = useTenant();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [requestOpen, setRequestOpen] = useState(false);
 
   // Ensure user record exists in DB on every dashboard visit
   useEffect(() => {
@@ -133,12 +135,13 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-3">
-            <Link
-              href="/dashboard/new"
-              className={buttonVariants({ size: "sm" })}
+            <Button
+              size="sm"
+              onClick={() => setRequestOpen(true)}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0"
             >
-              + New
-            </Link>
+              Request
+            </Button>
 
             {/* Avatar dropdown */}
             <DropdownMenu>
@@ -245,6 +248,15 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             onClick={() => setMobileOpen(false)}
           />
           <nav className="absolute left-0 top-0 bottom-0 w-64 bg-[#1A1425] border-r border-white/10 p-4 pt-20 space-y-1">
+            <button
+              onClick={() => {
+                setMobileOpen(false);
+                setRequestOpen(true);
+              }}
+              className="block w-full text-left px-3 py-2 rounded-md text-sm font-medium bg-gradient-to-r from-purple-500 to-pink-500 text-white mb-2"
+            >
+              Request Photos
+            </button>
             {NAV_LINKS.map((link) => (
               <Link
                 key={link.href}
@@ -307,6 +319,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
+
+      <RequestModal open={requestOpen} onOpenChange={setRequestOpen} />
     </div>
   );
 }
