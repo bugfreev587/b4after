@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -126,6 +127,7 @@ func (h *ComparisonHandler) Create(w http.ResponseWriter, r *http.Request) {
 		CreatedBy:      pgtype.Text{String: userID, Valid: true},
 	})
 	if err != nil {
+		log.Printf("[comparison] create error: %v", err)
 		Error(w, http.StatusInternalServerError, "failed to create comparison")
 		return
 	}
