@@ -69,41 +69,40 @@ func (h *ComparisonHandler) Create(w http.ResponseWriter, r *http.Request) {
 		req.Category = "other"
 	}
 
-	if req.SpaceID == "" {
-		Error(w, http.StatusBadRequest, "space_id is required")
-		return
-	}
-	spaceUID, err := uuid.Parse(req.SpaceID)
-	if err != nil {
-		Error(w, http.StatusBadRequest, "invalid space_id")
-		return
-	}
-	spaceUUID := pgtype.UUID{Bytes: spaceUID, Valid: true}
+	var spaceUUID pgtype.UUID
+	if req.SpaceID != "" {
+		spaceUID, err := uuid.Parse(req.SpaceID)
+		if err != nil {
+			Error(w, http.StatusBadRequest, "invalid space_id")
+			return
+		}
+		spaceUUID = pgtype.UUID{Bytes: spaceUID, Valid: true}
 
-	// Verify space exists and belongs to tenant
-	space, err := h.queries.GetSpaceByID(r.Context(), spaceUUID)
-	if err != nil {
-		Error(w, http.StatusNotFound, "space not found")
-		return
-	}
-	if space.TenantID != tenantID {
-		Error(w, http.StatusForbidden, "not your space")
-		return
-	}
+		// Verify space exists and belongs to tenant
+		space, err := h.queries.GetSpaceByID(r.Context(), spaceUUID)
+		if err != nil {
+			Error(w, http.StatusNotFound, "space not found")
+			return
+		}
+		if space.TenantID != tenantID {
+			Error(w, http.StatusForbidden, "not your space")
+			return
+		}
 
-	// Enforce per-space comparison limits: free=1, pro=5, business=10
-	plan := middleware.GetTenantPlan(r.Context())
-	var maxPerSpace int64 = 1
-	switch plan {
-	case db.UserPlanPro:
-		maxPerSpace = 5
-	case db.UserPlanBusiness:
-		maxPerSpace = 10
-	}
-	compCount, err := h.queries.CountComparisonsBySpaceID(r.Context(), spaceUUID)
-	if err == nil && compCount >= maxPerSpace {
-		Error(w, http.StatusForbidden, "comparison limit per space reached — upgrade to create more")
-		return
+		// Enforce per-space comparison limits: free=1, pro=5, business=10
+		plan := middleware.GetTenantPlan(r.Context())
+		var maxPerSpace int64 = 1
+		switch plan {
+		case db.UserPlanPro:
+			maxPerSpace = 5
+		case db.UserPlanBusiness:
+			maxPerSpace = 10
+		}
+		compCount, err := h.queries.CountComparisonsBySpaceID(r.Context(), spaceUUID)
+		if err == nil && compCount >= maxPerSpace {
+			Error(w, http.StatusForbidden, "comparison limit per space reached — upgrade to create more")
+			return
+		}
 	}
 
 	slug := service.GenerateSlug(req.Title)
