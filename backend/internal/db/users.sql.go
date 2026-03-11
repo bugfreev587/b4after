@@ -11,26 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const getUserByAPIKey = `-- name: GetUserByAPIKey :one
-SELECT id, email, name, avatar_url, created_at, updated_at, custom_subdomain, api_key FROM users WHERE api_key = $1
-`
-
-func (q *Queries) GetUserByAPIKey(ctx context.Context, apiKey pgtype.Text) (User, error) {
-	row := q.db.QueryRow(ctx, getUserByAPIKey, apiKey)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Email,
-		&i.Name,
-		&i.AvatarUrl,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.CustomSubdomain,
-		&i.ApiKey,
-	)
-	return i, err
-}
-
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, email, name, avatar_url, created_at, updated_at, custom_subdomain, api_key FROM users WHERE email = $1
 `
@@ -77,31 +57,6 @@ SELECT id, email, name, avatar_url, created_at, updated_at, custom_subdomain, ap
 
 func (q *Queries) GetUserBySubdomain(ctx context.Context, customSubdomain pgtype.Text) (User, error) {
 	row := q.db.QueryRow(ctx, getUserBySubdomain, customSubdomain)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Email,
-		&i.Name,
-		&i.AvatarUrl,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.CustomSubdomain,
-		&i.ApiKey,
-	)
-	return i, err
-}
-
-const setUserAPIKey = `-- name: SetUserAPIKey :one
-UPDATE users SET api_key = $2 WHERE id = $1 RETURNING id, email, name, avatar_url, created_at, updated_at, custom_subdomain, api_key
-`
-
-type SetUserAPIKeyParams struct {
-	ID     string      `json:"id"`
-	ApiKey pgtype.Text `json:"api_key"`
-}
-
-func (q *Queries) SetUserAPIKey(ctx context.Context, arg SetUserAPIKeyParams) (User, error) {
-	row := q.db.QueryRow(ctx, setUserAPIKey, arg.ID, arg.ApiKey)
 	var i User
 	err := row.Scan(
 		&i.ID,

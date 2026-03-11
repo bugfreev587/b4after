@@ -288,8 +288,7 @@ func main() {
 				r.Use(middleware.RequirePlan(db.UserPlanBusiness))
 				r.Get("/api/settings/subdomain", subdomainHandler.Get)
 				r.Post("/api/settings/subdomain", subdomainHandler.Update)
-				r.Post("/api/settings/api-key", handler.GenerateAPIKey(queries))
-			})
+				})
 
 			// Billing (owner only)
 			if cfg.StripeSecretKey != "" {

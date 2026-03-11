@@ -14,9 +14,6 @@ interface SubdomainData {
   domain_base: string;
 }
 
-interface ApiKeyData {
-  api_key: string | null;
-}
 
 export default function SettingsPage() {
   const api = useApiClient();
@@ -24,7 +21,6 @@ export default function SettingsPage() {
   const [workspaceName, setWorkspaceName] = useState("");
   const [subdomainData, setSubdomainData] = useState<SubdomainData | null>(null);
   const [subdomain, setSubdomain] = useState("");
-  const [apiKeyData, setApiKeyData] = useState<ApiKeyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingName, setSavingName] = useState(false);
   const [savingSubdomain, setSavingSubdomain] = useState(false);
@@ -32,15 +28,11 @@ export default function SettingsPage() {
   const fetchData = useCallback(async () => {
     try {
       if (plan === "business") {
-        const [sd, ak] = await Promise.all([
-          api.fetch<SubdomainData>("/settings/subdomain").catch(() => null),
-          api.fetch<ApiKeyData>("/settings/api-key").catch(() => null),
-        ]);
+        const sd = await api.fetch<SubdomainData>("/settings/subdomain").catch(() => null);
         if (sd) {
           setSubdomainData(sd);
           if (sd.subdomain) setSubdomain(sd.subdomain);
         }
-        if (ak) setApiKeyData(ak);
       }
     } catch {
       toast.error("Failed to load settings");
@@ -214,43 +206,6 @@ export default function SettingsPage() {
           </Card>
         )}
 
-        {/* API Key — Business plan */}
-        {plan === "business" && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">API Key</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {apiKeyData?.api_key ? (
-                <div className="space-y-2">
-                  <Label>Your API Key</Label>
-                  <div className="flex items-center gap-2">
-                    <code className="text-sm bg-muted px-3 py-1.5 rounded font-mono">
-                      {apiKeyData.api_key}
-                    </code>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        navigator.clipboard.writeText(apiKeyData.api_key!);
-                        toast.success("Copied to clipboard");
-                      }}
-                    >
-                      Copy
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Use this key to access the B4After API programmatically.
-                  </p>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No API key generated yet. Contact support to request one.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );

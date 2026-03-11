@@ -13,25 +13,10 @@ import (
 	"github.com/xiaoboyu/b4after/backend/internal/db"
 )
 
-// CombinedAuthMiddleware tries API key auth first (X-API-Key header),
-// then falls back to Clerk JWT (Authorization: Bearer ...).
+// CombinedAuthMiddleware authenticates requests using Clerk JWT (Authorization: Bearer ...).
 func CombinedAuthMiddleware(queries *db.Queries) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Try API key first
-			apiKey := r.Header.Get("X-API-Key")
-			if apiKey != "" {
-				user, err := queries.GetUserByAPIKey(r.Context(), pgtype.Text{String: apiKey, Valid: true})
-				if err != nil {
-					writeError(w, http.StatusUnauthorized, "invalid API key")
-					return
-				}
-				ctx := context.WithValue(r.Context(), userIDKey, user.ID)
-				next.ServeHTTP(w, r.WithContext(ctx))
-				return
-			}
-
-			// Fall back to Clerk JWT
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
 				writeError(w, http.StatusUnauthorized, "missing authorization header")

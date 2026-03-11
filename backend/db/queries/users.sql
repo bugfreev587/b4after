@@ -22,9 +22,3 @@ SELECT * FROM users WHERE custom_subdomain = $1;
 
 -- name: UpdateUserSubdomain :one
 UPDATE users SET custom_subdomain = $2 WHERE id = $1 RETURNING *;
-
--- name: GetUserByAPIKey :one
-SELECT * FROM users WHERE api_key = $1;
-
--- name: SetUserAPIKey :one
-UPDATE users SET api_key = $2 WHERE id = $1 RETURNING *;
