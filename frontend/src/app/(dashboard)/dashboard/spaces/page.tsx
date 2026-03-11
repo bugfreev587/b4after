@@ -102,14 +102,21 @@ export default function WorkspacePage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [s, c, r] = await Promise.all([
+      const [s, c] = await Promise.all([
         api.fetch<Space[]>("/spaces"),
         api.fetch<Comparison[]>("/comparisons"),
-        api.fetch<UploadRequest[]>("/upload-requests").catch(() => [] as UploadRequest[]),
       ]);
       setSpaces(s);
       setComparisons(c);
-      setRequests(r);
+      // Load requests per space
+      const allReqs = await Promise.all(
+        s.map((sp) =>
+          api
+            .fetch<UploadRequest[]>(`/spaces/${sp.id}/requests`)
+            .catch(() => [] as UploadRequest[]),
+        ),
+      );
+      setRequests(allReqs.flat());
     } catch (err) {
       console.error("Failed to load workspace data:", err);
     } finally {
