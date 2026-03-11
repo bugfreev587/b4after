@@ -12,8 +12,12 @@ RETURNING *;
 SELECT * FROM industry_benchmarks WHERE category = $1;
 
 -- name: CreateAchievement :exec
-INSERT INTO achievements (user_id, type) VALUES ($1, $2)
+INSERT INTO achievements (user_id, type, tenant_id) VALUES ($1, $2, $3)
 ON CONFLICT (user_id, type) DO NOTHING;
 
 -- name: ListAchievementsByUserID :many
 SELECT * FROM achievements WHERE user_id = $1 ORDER BY achieved_at DESC;
+
+-- Tenant-scoped queries
+-- name: ListAchievementsByTenantID :many
+SELECT * FROM achievements WHERE tenant_id = $1 ORDER BY achieved_at DESC;

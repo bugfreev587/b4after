@@ -24,9 +24,9 @@ func (q *Queries) CountUploadRequestsByUserIDThisMonth(ctx context.Context, user
 }
 
 const createUploadRequest = `-- name: CreateUploadRequest :one
-INSERT INTO upload_requests (space_id, user_id, token, client_name, client_email, client_phone, request_type, instruction_note, service_type, sent_via)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING id, space_id, user_id, token, client_name, client_email, client_phone, request_type, instruction_note, before_image_url, after_image_url, review_rating, review_content, service_type, status, sent_via, reminder_sent_at, submitted_at, reviewed_at, expires_at, created_at, updated_at
+INSERT INTO upload_requests (space_id, user_id, token, client_name, client_email, client_phone, request_type, instruction_note, service_type, sent_via, tenant_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+RETURNING id, space_id, user_id, token, client_name, client_email, client_phone, request_type, instruction_note, before_image_url, after_image_url, review_rating, review_content, service_type, status, sent_via, reminder_sent_at, submitted_at, reviewed_at, expires_at, created_at, updated_at, tenant_id
 `
 
 type CreateUploadRequestParams struct {
@@ -40,6 +40,7 @@ type CreateUploadRequestParams struct {
 	InstructionNote pgtype.Text          `json:"instruction_note"`
 	ServiceType     pgtype.Text          `json:"service_type"`
 	SentVia         UploadRequestSentVia `json:"sent_via"`
+	TenantID        pgtype.UUID          `json:"tenant_id"`
 }
 
 func (q *Queries) CreateUploadRequest(ctx context.Context, arg CreateUploadRequestParams) (UploadRequest, error) {
@@ -54,6 +55,7 @@ func (q *Queries) CreateUploadRequest(ctx context.Context, arg CreateUploadReque
 		arg.InstructionNote,
 		arg.ServiceType,
 		arg.SentVia,
+		arg.TenantID,
 	)
 	var i UploadRequest
 	err := row.Scan(
@@ -79,12 +81,13 @@ func (q *Queries) CreateUploadRequest(ctx context.Context, arg CreateUploadReque
 		&i.ExpiresAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
 
 const getUploadRequestByID = `-- name: GetUploadRequestByID :one
-SELECT id, space_id, user_id, token, client_name, client_email, client_phone, request_type, instruction_note, before_image_url, after_image_url, review_rating, review_content, service_type, status, sent_via, reminder_sent_at, submitted_at, reviewed_at, expires_at, created_at, updated_at FROM upload_requests WHERE id = $1
+SELECT id, space_id, user_id, token, client_name, client_email, client_phone, request_type, instruction_note, before_image_url, after_image_url, review_rating, review_content, service_type, status, sent_via, reminder_sent_at, submitted_at, reviewed_at, expires_at, created_at, updated_at, tenant_id FROM upload_requests WHERE id = $1
 `
 
 func (q *Queries) GetUploadRequestByID(ctx context.Context, id pgtype.UUID) (UploadRequest, error) {
@@ -113,12 +116,13 @@ func (q *Queries) GetUploadRequestByID(ctx context.Context, id pgtype.UUID) (Upl
 		&i.ExpiresAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
 
 const getUploadRequestByToken = `-- name: GetUploadRequestByToken :one
-SELECT id, space_id, user_id, token, client_name, client_email, client_phone, request_type, instruction_note, before_image_url, after_image_url, review_rating, review_content, service_type, status, sent_via, reminder_sent_at, submitted_at, reviewed_at, expires_at, created_at, updated_at FROM upload_requests WHERE token = $1
+SELECT id, space_id, user_id, token, client_name, client_email, client_phone, request_type, instruction_note, before_image_url, after_image_url, review_rating, review_content, service_type, status, sent_via, reminder_sent_at, submitted_at, reviewed_at, expires_at, created_at, updated_at, tenant_id FROM upload_requests WHERE token = $1
 `
 
 func (q *Queries) GetUploadRequestByToken(ctx context.Context, token string) (UploadRequest, error) {
@@ -147,12 +151,13 @@ func (q *Queries) GetUploadRequestByToken(ctx context.Context, token string) (Up
 		&i.ExpiresAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
 
 const listUploadRequestsBySpaceID = `-- name: ListUploadRequestsBySpaceID :many
-SELECT id, space_id, user_id, token, client_name, client_email, client_phone, request_type, instruction_note, before_image_url, after_image_url, review_rating, review_content, service_type, status, sent_via, reminder_sent_at, submitted_at, reviewed_at, expires_at, created_at, updated_at FROM upload_requests WHERE space_id = $1 ORDER BY created_at DESC
+SELECT id, space_id, user_id, token, client_name, client_email, client_phone, request_type, instruction_note, before_image_url, after_image_url, review_rating, review_content, service_type, status, sent_via, reminder_sent_at, submitted_at, reviewed_at, expires_at, created_at, updated_at, tenant_id FROM upload_requests WHERE space_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListUploadRequestsBySpaceID(ctx context.Context, spaceID pgtype.UUID) ([]UploadRequest, error) {
@@ -187,6 +192,56 @@ func (q *Queries) ListUploadRequestsBySpaceID(ctx context.Context, spaceID pgtyp
 			&i.ExpiresAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TenantID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUploadRequestsByTenantID = `-- name: ListUploadRequestsByTenantID :many
+SELECT id, space_id, user_id, token, client_name, client_email, client_phone, request_type, instruction_note, before_image_url, after_image_url, review_rating, review_content, service_type, status, sent_via, reminder_sent_at, submitted_at, reviewed_at, expires_at, created_at, updated_at, tenant_id FROM upload_requests WHERE tenant_id = $1 ORDER BY created_at DESC
+`
+
+// Tenant-scoped queries
+func (q *Queries) ListUploadRequestsByTenantID(ctx context.Context, tenantID pgtype.UUID) ([]UploadRequest, error) {
+	rows, err := q.db.Query(ctx, listUploadRequestsByTenantID, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []UploadRequest{}
+	for rows.Next() {
+		var i UploadRequest
+		if err := rows.Scan(
+			&i.ID,
+			&i.SpaceID,
+			&i.UserID,
+			&i.Token,
+			&i.ClientName,
+			&i.ClientEmail,
+			&i.ClientPhone,
+			&i.RequestType,
+			&i.InstructionNote,
+			&i.BeforeImageUrl,
+			&i.AfterImageUrl,
+			&i.ReviewRating,
+			&i.ReviewContent,
+			&i.ServiceType,
+			&i.Status,
+			&i.SentVia,
+			&i.ReminderSentAt,
+			&i.SubmittedAt,
+			&i.ReviewedAt,
+			&i.ExpiresAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.TenantID,
 		); err != nil {
 			return nil, err
 		}
@@ -208,7 +263,7 @@ func (q *Queries) UpdateUploadRequestReminderSent(ctx context.Context, id pgtype
 }
 
 const updateUploadRequestReviewed = `-- name: UpdateUploadRequestReviewed :one
-UPDATE upload_requests SET status = $2, reviewed_at = now() WHERE id = $1 RETURNING id, space_id, user_id, token, client_name, client_email, client_phone, request_type, instruction_note, before_image_url, after_image_url, review_rating, review_content, service_type, status, sent_via, reminder_sent_at, submitted_at, reviewed_at, expires_at, created_at, updated_at
+UPDATE upload_requests SET status = $2, reviewed_at = now() WHERE id = $1 RETURNING id, space_id, user_id, token, client_name, client_email, client_phone, request_type, instruction_note, before_image_url, after_image_url, review_rating, review_content, service_type, status, sent_via, reminder_sent_at, submitted_at, reviewed_at, expires_at, created_at, updated_at, tenant_id
 `
 
 type UpdateUploadRequestReviewedParams struct {
@@ -242,12 +297,13 @@ func (q *Queries) UpdateUploadRequestReviewed(ctx context.Context, arg UpdateUpl
 		&i.ExpiresAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
 
 const updateUploadRequestStatus = `-- name: UpdateUploadRequestStatus :one
-UPDATE upload_requests SET status = $2 WHERE id = $1 RETURNING id, space_id, user_id, token, client_name, client_email, client_phone, request_type, instruction_note, before_image_url, after_image_url, review_rating, review_content, service_type, status, sent_via, reminder_sent_at, submitted_at, reviewed_at, expires_at, created_at, updated_at
+UPDATE upload_requests SET status = $2 WHERE id = $1 RETURNING id, space_id, user_id, token, client_name, client_email, client_phone, request_type, instruction_note, before_image_url, after_image_url, review_rating, review_content, service_type, status, sent_via, reminder_sent_at, submitted_at, reviewed_at, expires_at, created_at, updated_at, tenant_id
 `
 
 type UpdateUploadRequestStatusParams struct {
@@ -281,6 +337,7 @@ func (q *Queries) UpdateUploadRequestStatus(ctx context.Context, arg UpdateUploa
 		&i.ExpiresAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
@@ -290,7 +347,7 @@ UPDATE upload_requests SET
     before_image_url = $2, after_image_url = $3,
     review_rating = $4, review_content = $5,
     status = 'submitted', submitted_at = now()
-WHERE id = $1 RETURNING id, space_id, user_id, token, client_name, client_email, client_phone, request_type, instruction_note, before_image_url, after_image_url, review_rating, review_content, service_type, status, sent_via, reminder_sent_at, submitted_at, reviewed_at, expires_at, created_at, updated_at
+WHERE id = $1 RETURNING id, space_id, user_id, token, client_name, client_email, client_phone, request_type, instruction_note, before_image_url, after_image_url, review_rating, review_content, service_type, status, sent_via, reminder_sent_at, submitted_at, reviewed_at, expires_at, created_at, updated_at, tenant_id
 `
 
 type UpdateUploadRequestSubmissionParams struct {
@@ -333,6 +390,7 @@ func (q *Queries) UpdateUploadRequestSubmission(ctx context.Context, arg UpdateU
 		&i.ExpiresAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }

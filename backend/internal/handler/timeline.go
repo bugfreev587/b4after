@@ -39,6 +39,8 @@ func (h *TimelineHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantID := middleware.GetTenantID(r.Context())
+
 	var req createTimelineRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		Error(w, http.StatusBadRequest, "invalid request body")
@@ -50,13 +52,9 @@ func (h *TimelineHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Free plan: max 1 timeline
-	user, err := h.queries.GetUserByID(r.Context(), userID)
-	if err != nil {
-		Error(w, http.StatusInternalServerError, "failed to get user")
-		return
-	}
-	if user.Plan == db.UserPlanFree {
-		count, err := h.queries.CountTimelinesByUserID(r.Context(), userID)
+	plan := middleware.GetTenantPlan(r.Context())
+	if plan == db.UserPlanFree {
+		count, err := h.queries.CountTimelinesByTenantID(r.Context(), tenantID)
 		if err != nil {
 			Error(w, http.StatusInternalServerError, "failed to count timelines")
 			return
@@ -81,6 +79,7 @@ func (h *TimelineHandler) Create(w http.ResponseWriter, r *http.Request) {
 		CtaText:     pgtype.Text{String: req.CtaText, Valid: req.CtaText != ""},
 		CtaUrl:      pgtype.Text{String: req.CtaURL, Valid: req.CtaURL != ""},
 		IsPublic:    isPublic,
+		TenantID:    tenantID,
 	}
 	if req.SpaceID != "" {
 		uid, err := uuid.Parse(req.SpaceID)
@@ -99,19 +98,9 @@ func (h *TimelineHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TimelineHandler) List(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
-	userIDs, err := middleware.GetAccessibleUserIDs(r.Context(), h.queries, userID)
-	if err != nil {
-		Error(w, http.StatusInternalServerError, "failed to get accessible users")
-		return
-	}
-
-	timelines, err := h.queries.ListTimelinesByUserIDs(r.Context(), userIDs)
+	timelines, err := h.queries.ListTimelinesByTenantID(r.Context(), tenantID)
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to list timelines")
 		return
@@ -163,11 +152,7 @@ type updateTimelineRequest struct {
 }
 
 func (h *TimelineHandler) Update(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
 	id := chi.URLParam(r, "id")
 	uid, err := uuid.Parse(id)
@@ -181,7 +166,7 @@ func (h *TimelineHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusNotFound, "timeline not found")
 		return
 	}
-	if !middleware.CanAccessResource(r.Context(), h.queries, userID, timeline.UserID) {
+	if timeline.TenantID != tenantID {
 		Error(w, http.StatusForbidden, "not your timeline")
 		return
 	}
@@ -210,11 +195,7 @@ func (h *TimelineHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TimelineHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
 	id := chi.URLParam(r, "id")
 	uid, err := uuid.Parse(id)
@@ -228,7 +209,7 @@ func (h *TimelineHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusNotFound, "timeline not found")
 		return
 	}
-	if !middleware.CanAccessResource(r.Context(), h.queries, userID, timeline.UserID) {
+	if timeline.TenantID != tenantID {
 		Error(w, http.StatusForbidden, "not your timeline")
 		return
 	}
@@ -250,11 +231,7 @@ type createTimelineEntryRequest struct {
 }
 
 func (h *TimelineHandler) CreateEntry(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
 	timelineID := chi.URLParam(r, "id")
 	tuid, err := uuid.Parse(timelineID)
@@ -268,18 +245,14 @@ func (h *TimelineHandler) CreateEntry(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusNotFound, "timeline not found")
 		return
 	}
-	if !middleware.CanAccessResource(r.Context(), h.queries, userID, timeline.UserID) {
+	if timeline.TenantID != tenantID {
 		Error(w, http.StatusForbidden, "not your timeline")
 		return
 	}
 
 	// Free plan: max 4 entries per timeline
-	user, err := h.queries.GetUserByID(r.Context(), userID)
-	if err != nil {
-		Error(w, http.StatusInternalServerError, "failed to get user")
-		return
-	}
-	if user.Plan == db.UserPlanFree {
+	plan := middleware.GetTenantPlan(r.Context())
+	if plan == db.UserPlanFree {
 		count, err := h.queries.CountTimelineEntriesByTimelineID(r.Context(), timeline.ID)
 		if err != nil {
 			Error(w, http.StatusInternalServerError, "failed to count entries")
@@ -325,11 +298,7 @@ func (h *TimelineHandler) CreateEntry(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TimelineHandler) UpdateEntry(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
 	entryID := chi.URLParam(r, "entryId")
 	euid, err := uuid.Parse(entryID)
@@ -350,7 +319,7 @@ func (h *TimelineHandler) UpdateEntry(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusNotFound, "timeline not found")
 		return
 	}
-	if !middleware.CanAccessResource(r.Context(), h.queries, userID, timeline.UserID) {
+	if timeline.TenantID != tenantID {
 		Error(w, http.StatusForbidden, "not your timeline")
 		return
 	}
@@ -384,11 +353,7 @@ func (h *TimelineHandler) UpdateEntry(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TimelineHandler) DeleteEntry(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
 	timelineID := chi.URLParam(r, "id")
 	tuid, err := uuid.Parse(timelineID)
@@ -402,7 +367,7 @@ func (h *TimelineHandler) DeleteEntry(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusNotFound, "timeline not found")
 		return
 	}
-	if !middleware.CanAccessResource(r.Context(), h.queries, userID, timeline.UserID) {
+	if timeline.TenantID != tenantID {
 		Error(w, http.StatusForbidden, "not your timeline")
 		return
 	}
@@ -428,11 +393,7 @@ type reorderEntry struct {
 }
 
 func (h *TimelineHandler) ReorderEntries(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
 	timelineID := chi.URLParam(r, "id")
 	tuid, err := uuid.Parse(timelineID)
@@ -446,7 +407,7 @@ func (h *TimelineHandler) ReorderEntries(w http.ResponseWriter, r *http.Request)
 		Error(w, http.StatusNotFound, "timeline not found")
 		return
 	}
-	if !middleware.CanAccessResource(r.Context(), h.queries, userID, timeline.UserID) {
+	if timeline.TenantID != tenantID {
 		Error(w, http.StatusForbidden, "not your timeline")
 		return
 	}

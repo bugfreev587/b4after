@@ -47,6 +47,7 @@ func (h *ComparisonHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
+	tenantID := middleware.GetTenantID(r.Context())
 
 	var req createComparisonRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -79,25 +80,21 @@ func (h *ComparisonHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	spaceUUID := pgtype.UUID{Bytes: spaceUID, Valid: true}
 
-	// Verify space exists and user has access
+	// Verify space exists and belongs to tenant
 	space, err := h.queries.GetSpaceByID(r.Context(), spaceUUID)
 	if err != nil {
 		Error(w, http.StatusNotFound, "space not found")
 		return
 	}
-	if !middleware.CanAccessResource(r.Context(), h.queries, userID, space.UserID) {
+	if space.TenantID != tenantID {
 		Error(w, http.StatusForbidden, "not your space")
 		return
 	}
 
 	// Enforce per-space comparison limits: free=1, pro=5, business=10
-	user, err := h.queries.GetUserByID(r.Context(), userID)
-	if err != nil {
-		Error(w, http.StatusInternalServerError, "failed to get user")
-		return
-	}
+	plan := middleware.GetTenantPlan(r.Context())
 	var maxPerSpace int64 = 1
-	switch user.Plan {
+	switch plan {
 	case db.UserPlanPro:
 		maxPerSpace = 5
 	case db.UserPlanBusiness:
@@ -126,6 +123,8 @@ func (h *ComparisonHandler) Create(w http.ResponseWriter, r *http.Request) {
 		ProcessImages:  req.ProcessImages,
 		SpaceID:        spaceUUID,
 		Source:         db.ComparisonSourceMerchant,
+		TenantID:       tenantID,
+		CreatedBy:      pgtype.Text{String: userID, Valid: true},
 	})
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to create comparison")
@@ -136,19 +135,9 @@ func (h *ComparisonHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ComparisonHandler) List(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
-	userIDs, err := middleware.GetAccessibleUserIDs(r.Context(), h.queries, userID)
-	if err != nil {
-		Error(w, http.StatusInternalServerError, "failed to get accessible users")
-		return
-	}
-
-	comps, err := h.queries.ListComparisonsByUserIDs(r.Context(), userIDs)
+	comps, err := h.queries.ListComparisonsByTenantID(r.Context(), tenantID)
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to list comparisons")
 		return
@@ -208,12 +197,6 @@ type updateComparisonRequest struct {
 }
 
 func (h *ComparisonHandler) Update(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
-
 	id := chi.URLParam(r, "id")
 	uid, err := uuid.Parse(id)
 	if err != nil {
@@ -221,13 +204,13 @@ func (h *ComparisonHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify ownership or team access
+	tenantID := middleware.GetTenantID(r.Context())
 	comp, err := h.queries.GetComparisonByID(r.Context(), pgtype.UUID{Bytes: uid, Valid: true})
 	if err != nil {
 		Error(w, http.StatusNotFound, "comparison not found")
 		return
 	}
-	if !middleware.CanAccessResource(r.Context(), h.queries, userID, comp.UserID) {
+	if comp.TenantID != tenantID {
 		Error(w, http.StatusForbidden, "not your comparison")
 		return
 	}
@@ -261,12 +244,6 @@ func (h *ComparisonHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ComparisonHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
-
 	id := chi.URLParam(r, "id")
 	uid, err := uuid.Parse(id)
 	if err != nil {
@@ -274,12 +251,13 @@ func (h *ComparisonHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantID := middleware.GetTenantID(r.Context())
 	comp, err := h.queries.GetComparisonByID(r.Context(), pgtype.UUID{Bytes: uid, Valid: true})
 	if err != nil {
 		Error(w, http.StatusNotFound, "comparison not found")
 		return
 	}
-	if !middleware.CanAccessResource(r.Context(), h.queries, userID, comp.UserID) {
+	if comp.TenantID != tenantID {
 		Error(w, http.StatusForbidden, "not your comparison")
 		return
 	}

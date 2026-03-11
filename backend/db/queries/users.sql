@@ -17,9 +17,6 @@ RETURNING *;
 -- name: UpdateUser :one
 UPDATE users SET name = $2, avatar_url = $3 WHERE id = $1 RETURNING *;
 
--- name: UpdateUserPlan :exec
-UPDATE users SET plan = $2, stripe_customer_id = $3 WHERE id = $1;
-
 -- name: GetUserBySubdomain :one
 SELECT * FROM users WHERE custom_subdomain = $1;
 

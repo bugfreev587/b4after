@@ -49,7 +49,14 @@ func (h *LeadHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify merchant exists
+	// Find the tenant for this merchant
+	tenant, err := h.queries.GetTenantByOwnerID(r.Context(), req.UserID)
+	if err != nil {
+		Error(w, http.StatusNotFound, "merchant not found")
+		return
+	}
+
+	// Get merchant for email notification
 	merchant, err := h.queries.GetUserByID(r.Context(), req.UserID)
 	if err != nil {
 		Error(w, http.StatusNotFound, "merchant not found")
@@ -57,8 +64,8 @@ func (h *LeadHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Free plan: 10 leads/month
-	if merchant.Plan == db.UserPlanFree {
-		count, err := h.queries.CountLeadsByUserIDThisMonth(r.Context(), req.UserID)
+	if tenant.Plan == db.UserPlanFree {
+		count, err := h.queries.CountLeadsByTenantIDThisMonth(r.Context(), tenant.ID)
 		if err != nil {
 			Error(w, http.StatusInternalServerError, "failed to count leads")
 			return
@@ -85,6 +92,7 @@ func (h *LeadHandler) Create(w http.ResponseWriter, r *http.Request) {
 		PreferredTime: pgtype.Text{String: req.PreferredTime, Valid: req.PreferredTime != ""},
 		Message:       pgtype.Text{String: req.Message, Valid: req.Message != ""},
 		SourceUrl:     pgtype.Text{String: req.SourceURL, Valid: req.SourceURL != ""},
+		TenantID:      tenant.ID,
 	}
 	if req.ComparisonID != "" {
 		uid, err := uuid.Parse(req.ComparisonID)
@@ -117,19 +125,9 @@ func (h *LeadHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *LeadHandler) List(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
-	userIDs, err := middleware.GetAccessibleUserIDs(r.Context(), h.queries, userID)
-	if err != nil {
-		Error(w, http.StatusInternalServerError, "failed to get accessible users")
-		return
-	}
-
-	leads, err := h.queries.ListLeadsByUserIDs(r.Context(), userIDs)
+	leads, err := h.queries.ListLeadsByTenantID(r.Context(), tenantID)
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to list leads")
 		return
@@ -151,11 +149,7 @@ type updateLeadStatusRequest struct {
 }
 
 func (h *LeadHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
 	id := chi.URLParam(r, "id")
 	uid, err := uuid.Parse(id)
@@ -169,7 +163,7 @@ func (h *LeadHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusNotFound, "lead not found")
 		return
 	}
-	if !middleware.CanAccessResource(r.Context(), h.queries, userID, lead.UserID) {
+	if lead.TenantID != tenantID {
 		Error(w, http.StatusForbidden, "not your lead")
 		return
 	}
@@ -192,13 +186,9 @@ func (h *LeadHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *LeadHandler) GetStats(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
-	stats, err := h.queries.GetLeadStats(r.Context(), userID)
+	stats, err := h.queries.GetLeadStatsByTenantID(r.Context(), tenantID)
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to get lead stats")
 		return
@@ -212,13 +202,9 @@ func (h *LeadHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *LeadHandler) GetFormConfig(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
-	config, err := h.queries.GetFormConfig(r.Context(), userID)
+	config, err := h.queries.GetFormConfigByTenantID(r.Context(), tenantID)
 	if err != nil {
 		// Return defaults if not found
 		JSON(w, http.StatusOK, map[string]any{
@@ -256,6 +242,8 @@ func (h *LeadHandler) UpdateFormConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantID := middleware.GetTenantID(r.Context())
+
 	var req updateFormConfigRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		Error(w, http.StatusBadRequest, "invalid request body")
@@ -273,6 +261,7 @@ func (h *LeadHandler) UpdateFormConfig(w http.ResponseWriter, r *http.Request) {
 		Services:         servicesJSON,
 		WhatsappNumber:   pgtype.Text{String: req.WhatsappNumber, Valid: req.WhatsappNumber != ""},
 		AutoReplyMessage: pgtype.Text{String: req.AutoReplyMessage, Valid: req.AutoReplyMessage != ""},
+		TenantID:         tenantID,
 	})
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to update form config")

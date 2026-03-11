@@ -28,17 +28,15 @@ func NewOutputHandler(queries *db.Queries, r2 *storage.R2Client) *OutputHandler 
 
 // getOutputBranding returns watermark text and brand logo URL based on user plan.
 func (h *OutputHandler) getOutputBranding(r *http.Request, userID string) (watermarkText, brandLogoURL string) {
-	user, err := h.queries.GetUserByID(r.Context(), userID)
-	if err != nil {
-		return "BeforeAfter.io", ""
-	}
+	plan := middleware.GetTenantPlan(r.Context())
+	tenantID := middleware.GetTenantID(r.Context())
 
-	switch user.Plan {
+	switch plan {
 	case db.UserPlanFree:
 		return "BeforeAfter.io", ""
 	case db.UserPlanPro, db.UserPlanBusiness:
 		// Check for brand logo
-		brands, err := h.queries.ListBrandsByUserID(r.Context(), userID)
+		brands, err := h.queries.ListBrandsByTenantID(r.Context(), tenantID)
 		if err == nil && len(brands) > 0 && brands[0].LogoUrl.Valid {
 			return "", brands[0].LogoUrl.String
 		}

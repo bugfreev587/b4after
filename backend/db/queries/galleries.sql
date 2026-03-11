@@ -1,6 +1,6 @@
 -- name: CreateGallery :one
-INSERT INTO galleries (user_id, title, slug, description)
-VALUES ($1, $2, $3, $4) RETURNING *;
+INSERT INTO galleries (user_id, title, slug, description, tenant_id)
+VALUES ($1, $2, $3, $4, $5) RETURNING *;
 
 -- name: GetGalleryByID :one
 SELECT * FROM galleries WHERE id = $1;
@@ -36,3 +36,7 @@ SELECT * FROM galleries WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC
 
 -- name: ListPublishedGalleriesByUserID :many
 SELECT * FROM galleries WHERE user_id = $1 AND is_published = true ORDER BY created_at DESC;
+
+-- Tenant-scoped queries
+-- name: ListGalleriesByTenantID :many
+SELECT * FROM galleries WHERE tenant_id = $1 ORDER BY created_at DESC;

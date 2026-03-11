@@ -1,6 +1,6 @@
 -- name: CreateSpace :one
-INSERT INTO spaces (user_id, slug, name, description, category, cover_image_url, services, cta_text, cta_url, cta_type, is_public)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+INSERT INTO spaces (user_id, slug, name, description, category, cover_image_url, services, cta_text, cta_url, cta_type, is_public, tenant_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 RETURNING *;
 
 -- name: GetSpaceByID :one
@@ -29,3 +29,10 @@ SELECT COUNT(*) FROM spaces WHERE user_id = $1;
 
 -- name: GetPublicSpaceBySlug :one
 SELECT * FROM spaces WHERE slug = $1 AND is_public = true;
+
+-- Tenant-scoped queries
+-- name: ListSpacesByTenantID :many
+SELECT * FROM spaces WHERE tenant_id = $1 ORDER BY created_at DESC;
+
+-- name: CountSpacesByTenantID :one
+SELECT COUNT(*) FROM spaces WHERE tenant_id = $1;

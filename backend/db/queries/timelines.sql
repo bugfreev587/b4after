@@ -1,6 +1,6 @@
 -- name: CreateTimeline :one
-INSERT INTO timelines (user_id, space_id, slug, title, description, category, cta_text, cta_url, is_public)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO timelines (user_id, space_id, slug, title, description, category, cta_text, cta_url, is_public, tenant_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING *;
 
 -- name: GetTimelineByID :one
@@ -45,3 +45,10 @@ UPDATE timeline_entries SET sort_order = $2 WHERE id = $1;
 
 -- name: CountTimelineEntriesByTimelineID :one
 SELECT COUNT(*) FROM timeline_entries WHERE timeline_id = $1;
+
+-- Tenant-scoped queries
+-- name: ListTimelinesByTenantID :many
+SELECT * FROM timelines WHERE tenant_id = $1 ORDER BY created_at DESC;
+
+-- name: CountTimelinesByTenantID :one
+SELECT COUNT(*) FROM timelines WHERE tenant_id = $1;

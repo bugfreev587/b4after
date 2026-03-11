@@ -28,8 +28,8 @@ func (q *Queries) AddComparisonToGallery(ctx context.Context, arg AddComparisonT
 }
 
 const createGallery = `-- name: CreateGallery :one
-INSERT INTO galleries (user_id, title, slug, description)
-VALUES ($1, $2, $3, $4) RETURNING id, user_id, title, slug, description, is_published, created_at, updated_at
+INSERT INTO galleries (user_id, title, slug, description, tenant_id)
+VALUES ($1, $2, $3, $4, $5) RETURNING id, user_id, title, slug, description, is_published, created_at, updated_at, tenant_id
 `
 
 type CreateGalleryParams struct {
@@ -37,6 +37,7 @@ type CreateGalleryParams struct {
 	Title       string      `json:"title"`
 	Slug        string      `json:"slug"`
 	Description pgtype.Text `json:"description"`
+	TenantID    pgtype.UUID `json:"tenant_id"`
 }
 
 func (q *Queries) CreateGallery(ctx context.Context, arg CreateGalleryParams) (Gallery, error) {
@@ -45,6 +46,7 @@ func (q *Queries) CreateGallery(ctx context.Context, arg CreateGalleryParams) (G
 		arg.Title,
 		arg.Slug,
 		arg.Description,
+		arg.TenantID,
 	)
 	var i Gallery
 	err := row.Scan(
@@ -56,6 +58,7 @@ func (q *Queries) CreateGallery(ctx context.Context, arg CreateGalleryParams) (G
 		&i.IsPublished,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
@@ -70,7 +73,7 @@ func (q *Queries) DeleteGallery(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getGalleryByID = `-- name: GetGalleryByID :one
-SELECT id, user_id, title, slug, description, is_published, created_at, updated_at FROM galleries WHERE id = $1
+SELECT id, user_id, title, slug, description, is_published, created_at, updated_at, tenant_id FROM galleries WHERE id = $1
 `
 
 func (q *Queries) GetGalleryByID(ctx context.Context, id pgtype.UUID) (Gallery, error) {
@@ -85,12 +88,13 @@ func (q *Queries) GetGalleryByID(ctx context.Context, id pgtype.UUID) (Gallery, 
 		&i.IsPublished,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
 
 const getGalleryBySlug = `-- name: GetGalleryBySlug :one
-SELECT id, user_id, title, slug, description, is_published, created_at, updated_at FROM galleries WHERE slug = $1
+SELECT id, user_id, title, slug, description, is_published, created_at, updated_at, tenant_id FROM galleries WHERE slug = $1
 `
 
 func (q *Queries) GetGalleryBySlug(ctx context.Context, slug string) (Gallery, error) {
@@ -105,12 +109,13 @@ func (q *Queries) GetGalleryBySlug(ctx context.Context, slug string) (Gallery, e
 		&i.IsPublished,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
 
 const getGalleryComparisons = `-- name: GetGalleryComparisons :many
-SELECT c.id, c.user_id, c.brand_id, c.title, c.description, c.slug, c.category, c.before_image_url, c.after_image_url, c.before_label, c.after_label, c.cta_text, c.cta_url, c.is_published, c.view_count, c.created_at, c.updated_at, c.process_images, c.space_id, c.source, c.upload_request_id FROM comparisons c
+SELECT c.id, c.user_id, c.brand_id, c.title, c.description, c.slug, c.category, c.before_image_url, c.after_image_url, c.before_label, c.after_label, c.cta_text, c.cta_url, c.is_published, c.view_count, c.created_at, c.updated_at, c.process_images, c.space_id, c.source, c.upload_request_id, c.tenant_id, c.created_by FROM comparisons c
 JOIN gallery_comparisons gc ON gc.comparison_id = c.id
 WHERE gc.gallery_id = $1
 ORDER BY gc.sort_order
@@ -147,6 +152,43 @@ func (q *Queries) GetGalleryComparisons(ctx context.Context, galleryID pgtype.UU
 			&i.SpaceID,
 			&i.Source,
 			&i.UploadRequestID,
+			&i.TenantID,
+			&i.CreatedBy,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGalleriesByTenantID = `-- name: ListGalleriesByTenantID :many
+SELECT id, user_id, title, slug, description, is_published, created_at, updated_at, tenant_id FROM galleries WHERE tenant_id = $1 ORDER BY created_at DESC
+`
+
+// Tenant-scoped queries
+func (q *Queries) ListGalleriesByTenantID(ctx context.Context, tenantID pgtype.UUID) ([]Gallery, error) {
+	rows, err := q.db.Query(ctx, listGalleriesByTenantID, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Gallery{}
+	for rows.Next() {
+		var i Gallery
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Title,
+			&i.Slug,
+			&i.Description,
+			&i.IsPublished,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.TenantID,
 		); err != nil {
 			return nil, err
 		}
@@ -159,7 +201,7 @@ func (q *Queries) GetGalleryComparisons(ctx context.Context, galleryID pgtype.UU
 }
 
 const listGalleriesByUserID = `-- name: ListGalleriesByUserID :many
-SELECT id, user_id, title, slug, description, is_published, created_at, updated_at FROM galleries WHERE user_id = $1 ORDER BY created_at DESC
+SELECT id, user_id, title, slug, description, is_published, created_at, updated_at, tenant_id FROM galleries WHERE user_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListGalleriesByUserID(ctx context.Context, userID string) ([]Gallery, error) {
@@ -180,6 +222,7 @@ func (q *Queries) ListGalleriesByUserID(ctx context.Context, userID string) ([]G
 			&i.IsPublished,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TenantID,
 		); err != nil {
 			return nil, err
 		}
@@ -192,7 +235,7 @@ func (q *Queries) ListGalleriesByUserID(ctx context.Context, userID string) ([]G
 }
 
 const listGalleriesByUserIDs = `-- name: ListGalleriesByUserIDs :many
-SELECT id, user_id, title, slug, description, is_published, created_at, updated_at FROM galleries WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC
+SELECT id, user_id, title, slug, description, is_published, created_at, updated_at, tenant_id FROM galleries WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC
 `
 
 func (q *Queries) ListGalleriesByUserIDs(ctx context.Context, dollar_1 []string) ([]Gallery, error) {
@@ -213,6 +256,7 @@ func (q *Queries) ListGalleriesByUserIDs(ctx context.Context, dollar_1 []string)
 			&i.IsPublished,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TenantID,
 		); err != nil {
 			return nil, err
 		}
@@ -225,7 +269,7 @@ func (q *Queries) ListGalleriesByUserIDs(ctx context.Context, dollar_1 []string)
 }
 
 const listPublishedGalleriesByUserID = `-- name: ListPublishedGalleriesByUserID :many
-SELECT id, user_id, title, slug, description, is_published, created_at, updated_at FROM galleries WHERE user_id = $1 AND is_published = true ORDER BY created_at DESC
+SELECT id, user_id, title, slug, description, is_published, created_at, updated_at, tenant_id FROM galleries WHERE user_id = $1 AND is_published = true ORDER BY created_at DESC
 `
 
 func (q *Queries) ListPublishedGalleriesByUserID(ctx context.Context, userID string) ([]Gallery, error) {
@@ -246,6 +290,7 @@ func (q *Queries) ListPublishedGalleriesByUserID(ctx context.Context, userID str
 			&i.IsPublished,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TenantID,
 		); err != nil {
 			return nil, err
 		}
@@ -273,7 +318,7 @@ func (q *Queries) RemoveComparisonFromGallery(ctx context.Context, arg RemoveCom
 
 const updateGallery = `-- name: UpdateGallery :one
 UPDATE galleries SET title = $2, description = $3, is_published = $4
-WHERE id = $1 RETURNING id, user_id, title, slug, description, is_published, created_at, updated_at
+WHERE id = $1 RETURNING id, user_id, title, slug, description, is_published, created_at, updated_at, tenant_id
 `
 
 type UpdateGalleryParams struct {
@@ -300,6 +345,7 @@ func (q *Queries) UpdateGallery(ctx context.Context, arg UpdateGalleryParams) (G
 		&i.IsPublished,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }

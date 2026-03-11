@@ -3,6 +3,7 @@ package handler
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"log"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/xiaoboyu/b4after/backend/internal/db"
 	"github.com/xiaoboyu/b4after/backend/internal/middleware"
+	"github.com/xiaoboyu/b4after/backend/internal/service"
 )
 
 type UserHandler struct {
@@ -33,7 +35,46 @@ func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Auto-create tenant for users who don't have one
+	_, tenantErr := h.queries.GetTenantForUser(r.Context(), userID)
+	if tenantErr != nil {
+		h.autoCreateTenant(r, userID, user)
+	}
+
 	JSON(w, http.StatusOK, userResponse(user))
+}
+
+func (h *UserHandler) autoCreateTenant(r *http.Request, userID string, user db.User) {
+	name := user.Name
+	if name == "" {
+		name = user.Email
+	}
+	if name == "" {
+		name = "My Workspace"
+	}
+
+	slug := "ws-" + service.GenerateSlug(name)
+
+	tenant, err := h.queries.CreateTenant(r.Context(), db.CreateTenantParams{
+		Name:    name + "'s Workspace",
+		Slug:    slug,
+		Plan:    db.UserPlanFree,
+		OwnerID: userID,
+	})
+	if err != nil {
+		log.Printf("[user] failed to auto-create tenant for %s: %v", userID, err)
+		return
+	}
+
+	_, err = h.queries.CreateTenantMember(r.Context(), db.CreateTenantMemberParams{
+		TenantID: tenant.ID,
+		UserID:   userID,
+		Role:     db.TenantMemberRoleOwner,
+		Status:   db.TenantMemberStatusActive,
+	})
+	if err != nil {
+		log.Printf("[user] failed to create tenant member for %s: %v", userID, err)
+	}
 }
 
 func userResponse(u db.User) map[string]any {
@@ -42,13 +83,20 @@ func userResponse(u db.User) map[string]any {
 		"email":      u.Email,
 		"name":       u.Name,
 		"avatar_url": pgtextToPtr(u.AvatarUrl),
-		"plan":       string(u.Plan),
 		"created_at": u.CreatedAt.Time,
 	}
 }
 
 func uuidToString(id pgtype.UUID) string {
 	return uuid.UUID(id.Bytes).String()
+}
+
+func parseUUID(s string) (pgtype.UUID, error) {
+	u, err := uuid.Parse(s)
+	if err != nil {
+		return pgtype.UUID{}, err
+	}
+	return pgtype.UUID{Bytes: u, Valid: true}, nil
 }
 
 func pgtextToPtr(t pgtype.Text) *string {

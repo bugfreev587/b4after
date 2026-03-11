@@ -12,8 +12,8 @@ import (
 )
 
 const createBrand = `-- name: CreateBrand :one
-INSERT INTO brands (user_id, name, logo_url, primary_color, secondary_color, website_url)
-VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, user_id, name, logo_url, primary_color, secondary_color, website_url, created_at, updated_at
+INSERT INTO brands (user_id, name, logo_url, primary_color, secondary_color, website_url, tenant_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, user_id, name, logo_url, primary_color, secondary_color, website_url, created_at, updated_at, tenant_id
 `
 
 type CreateBrandParams struct {
@@ -23,6 +23,7 @@ type CreateBrandParams struct {
 	PrimaryColor   string      `json:"primary_color"`
 	SecondaryColor string      `json:"secondary_color"`
 	WebsiteUrl     pgtype.Text `json:"website_url"`
+	TenantID       pgtype.UUID `json:"tenant_id"`
 }
 
 func (q *Queries) CreateBrand(ctx context.Context, arg CreateBrandParams) (Brand, error) {
@@ -33,6 +34,7 @@ func (q *Queries) CreateBrand(ctx context.Context, arg CreateBrandParams) (Brand
 		arg.PrimaryColor,
 		arg.SecondaryColor,
 		arg.WebsiteUrl,
+		arg.TenantID,
 	)
 	var i Brand
 	err := row.Scan(
@@ -45,12 +47,13 @@ func (q *Queries) CreateBrand(ctx context.Context, arg CreateBrandParams) (Brand
 		&i.WebsiteUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
 
 const getBrandByID = `-- name: GetBrandByID :one
-SELECT id, user_id, name, logo_url, primary_color, secondary_color, website_url, created_at, updated_at FROM brands WHERE id = $1
+SELECT id, user_id, name, logo_url, primary_color, secondary_color, website_url, created_at, updated_at, tenant_id FROM brands WHERE id = $1
 `
 
 func (q *Queries) GetBrandByID(ctx context.Context, id pgtype.UUID) (Brand, error) {
@@ -66,12 +69,71 @@ func (q *Queries) GetBrandByID(ctx context.Context, id pgtype.UUID) (Brand, erro
 		&i.WebsiteUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
 
+const getBrandByTenantID = `-- name: GetBrandByTenantID :one
+SELECT id, user_id, name, logo_url, primary_color, secondary_color, website_url, created_at, updated_at, tenant_id FROM brands WHERE tenant_id = $1 LIMIT 1
+`
+
+// Tenant-scoped queries
+func (q *Queries) GetBrandByTenantID(ctx context.Context, tenantID pgtype.UUID) (Brand, error) {
+	row := q.db.QueryRow(ctx, getBrandByTenantID, tenantID)
+	var i Brand
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.LogoUrl,
+		&i.PrimaryColor,
+		&i.SecondaryColor,
+		&i.WebsiteUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.TenantID,
+	)
+	return i, err
+}
+
+const listBrandsByTenantID = `-- name: ListBrandsByTenantID :many
+SELECT id, user_id, name, logo_url, primary_color, secondary_color, website_url, created_at, updated_at, tenant_id FROM brands WHERE tenant_id = $1 ORDER BY created_at DESC
+`
+
+func (q *Queries) ListBrandsByTenantID(ctx context.Context, tenantID pgtype.UUID) ([]Brand, error) {
+	rows, err := q.db.Query(ctx, listBrandsByTenantID, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Brand{}
+	for rows.Next() {
+		var i Brand
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Name,
+			&i.LogoUrl,
+			&i.PrimaryColor,
+			&i.SecondaryColor,
+			&i.WebsiteUrl,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.TenantID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listBrandsByUserID = `-- name: ListBrandsByUserID :many
-SELECT id, user_id, name, logo_url, primary_color, secondary_color, website_url, created_at, updated_at FROM brands WHERE user_id = $1 ORDER BY created_at DESC
+SELECT id, user_id, name, logo_url, primary_color, secondary_color, website_url, created_at, updated_at, tenant_id FROM brands WHERE user_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListBrandsByUserID(ctx context.Context, userID string) ([]Brand, error) {
@@ -93,6 +155,7 @@ func (q *Queries) ListBrandsByUserID(ctx context.Context, userID string) ([]Bran
 			&i.WebsiteUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TenantID,
 		); err != nil {
 			return nil, err
 		}
@@ -106,7 +169,7 @@ func (q *Queries) ListBrandsByUserID(ctx context.Context, userID string) ([]Bran
 
 const updateBrand = `-- name: UpdateBrand :one
 UPDATE brands SET name = $2, logo_url = $3, primary_color = $4, secondary_color = $5, website_url = $6
-WHERE id = $1 RETURNING id, user_id, name, logo_url, primary_color, secondary_color, website_url, created_at, updated_at
+WHERE id = $1 RETURNING id, user_id, name, logo_url, primary_color, secondary_color, website_url, created_at, updated_at, tenant_id
 `
 
 type UpdateBrandParams struct {
@@ -138,6 +201,7 @@ func (q *Queries) UpdateBrand(ctx context.Context, arg UpdateBrandParams) (Brand
 		&i.WebsiteUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }

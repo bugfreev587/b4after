@@ -12,7 +12,7 @@ import (
 )
 
 const getUserByAPIKey = `-- name: GetUserByAPIKey :one
-SELECT id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at, custom_subdomain, api_key FROM users WHERE api_key = $1
+SELECT id, email, name, avatar_url, created_at, updated_at, custom_subdomain, api_key FROM users WHERE api_key = $1
 `
 
 func (q *Queries) GetUserByAPIKey(ctx context.Context, apiKey pgtype.Text) (User, error) {
@@ -23,8 +23,6 @@ func (q *Queries) GetUserByAPIKey(ctx context.Context, apiKey pgtype.Text) (User
 		&i.Email,
 		&i.Name,
 		&i.AvatarUrl,
-		&i.Plan,
-		&i.StripeCustomerID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CustomSubdomain,
@@ -34,7 +32,7 @@ func (q *Queries) GetUserByAPIKey(ctx context.Context, apiKey pgtype.Text) (User
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at, custom_subdomain, api_key FROM users WHERE email = $1
+SELECT id, email, name, avatar_url, created_at, updated_at, custom_subdomain, api_key FROM users WHERE email = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -45,8 +43,6 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Email,
 		&i.Name,
 		&i.AvatarUrl,
-		&i.Plan,
-		&i.StripeCustomerID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CustomSubdomain,
@@ -56,7 +52,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at, custom_subdomain, api_key FROM users WHERE id = $1
+SELECT id, email, name, avatar_url, created_at, updated_at, custom_subdomain, api_key FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
@@ -67,8 +63,6 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
 		&i.Email,
 		&i.Name,
 		&i.AvatarUrl,
-		&i.Plan,
-		&i.StripeCustomerID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CustomSubdomain,
@@ -78,7 +72,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
 }
 
 const getUserBySubdomain = `-- name: GetUserBySubdomain :one
-SELECT id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at, custom_subdomain, api_key FROM users WHERE custom_subdomain = $1
+SELECT id, email, name, avatar_url, created_at, updated_at, custom_subdomain, api_key FROM users WHERE custom_subdomain = $1
 `
 
 func (q *Queries) GetUserBySubdomain(ctx context.Context, customSubdomain pgtype.Text) (User, error) {
@@ -89,8 +83,6 @@ func (q *Queries) GetUserBySubdomain(ctx context.Context, customSubdomain pgtype
 		&i.Email,
 		&i.Name,
 		&i.AvatarUrl,
-		&i.Plan,
-		&i.StripeCustomerID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CustomSubdomain,
@@ -100,7 +92,7 @@ func (q *Queries) GetUserBySubdomain(ctx context.Context, customSubdomain pgtype
 }
 
 const setUserAPIKey = `-- name: SetUserAPIKey :one
-UPDATE users SET api_key = $2 WHERE id = $1 RETURNING id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at, custom_subdomain, api_key
+UPDATE users SET api_key = $2 WHERE id = $1 RETURNING id, email, name, avatar_url, created_at, updated_at, custom_subdomain, api_key
 `
 
 type SetUserAPIKeyParams struct {
@@ -116,8 +108,6 @@ func (q *Queries) SetUserAPIKey(ctx context.Context, arg SetUserAPIKeyParams) (U
 		&i.Email,
 		&i.Name,
 		&i.AvatarUrl,
-		&i.Plan,
-		&i.StripeCustomerID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CustomSubdomain,
@@ -127,7 +117,7 @@ func (q *Queries) SetUserAPIKey(ctx context.Context, arg SetUserAPIKeyParams) (U
 }
 
 const updateUser = `-- name: UpdateUser :one
-UPDATE users SET name = $2, avatar_url = $3 WHERE id = $1 RETURNING id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at, custom_subdomain, api_key
+UPDATE users SET name = $2, avatar_url = $3 WHERE id = $1 RETURNING id, email, name, avatar_url, created_at, updated_at, custom_subdomain, api_key
 `
 
 type UpdateUserParams struct {
@@ -144,8 +134,6 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.Email,
 		&i.Name,
 		&i.AvatarUrl,
-		&i.Plan,
-		&i.StripeCustomerID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CustomSubdomain,
@@ -154,23 +142,8 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 	return i, err
 }
 
-const updateUserPlan = `-- name: UpdateUserPlan :exec
-UPDATE users SET plan = $2, stripe_customer_id = $3 WHERE id = $1
-`
-
-type UpdateUserPlanParams struct {
-	ID               string      `json:"id"`
-	Plan             UserPlan    `json:"plan"`
-	StripeCustomerID pgtype.Text `json:"stripe_customer_id"`
-}
-
-func (q *Queries) UpdateUserPlan(ctx context.Context, arg UpdateUserPlanParams) error {
-	_, err := q.db.Exec(ctx, updateUserPlan, arg.ID, arg.Plan, arg.StripeCustomerID)
-	return err
-}
-
 const updateUserSubdomain = `-- name: UpdateUserSubdomain :one
-UPDATE users SET custom_subdomain = $2 WHERE id = $1 RETURNING id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at, custom_subdomain, api_key
+UPDATE users SET custom_subdomain = $2 WHERE id = $1 RETURNING id, email, name, avatar_url, created_at, updated_at, custom_subdomain, api_key
 `
 
 type UpdateUserSubdomainParams struct {
@@ -186,8 +159,6 @@ func (q *Queries) UpdateUserSubdomain(ctx context.Context, arg UpdateUserSubdoma
 		&i.Email,
 		&i.Name,
 		&i.AvatarUrl,
-		&i.Plan,
-		&i.StripeCustomerID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CustomSubdomain,
@@ -204,7 +175,7 @@ ON CONFLICT (id) DO UPDATE SET
     name = CASE WHEN EXCLUDED.name = '' THEN users.name ELSE EXCLUDED.name END,
     avatar_url = CASE WHEN EXCLUDED.avatar_url IS NULL THEN users.avatar_url ELSE EXCLUDED.avatar_url END,
     updated_at = now()
-RETURNING id, email, name, avatar_url, plan, stripe_customer_id, created_at, updated_at, custom_subdomain, api_key
+RETURNING id, email, name, avatar_url, created_at, updated_at, custom_subdomain, api_key
 `
 
 type UpsertUserParams struct {
@@ -227,8 +198,6 @@ func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) (User, e
 		&i.Email,
 		&i.Name,
 		&i.AvatarUrl,
-		&i.Plan,
-		&i.StripeCustomerID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CustomSubdomain,

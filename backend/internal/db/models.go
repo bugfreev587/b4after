@@ -619,6 +619,135 @@ func (ns NullTeamRole) Value() (driver.Value, error) {
 	return string(ns.TeamRole), nil
 }
 
+type TenantInviteStatus string
+
+const (
+	TenantInviteStatusPending   TenantInviteStatus = "pending"
+	TenantInviteStatusAccepted  TenantInviteStatus = "accepted"
+	TenantInviteStatusExpired   TenantInviteStatus = "expired"
+	TenantInviteStatusCancelled TenantInviteStatus = "cancelled"
+)
+
+func (e *TenantInviteStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TenantInviteStatus(s)
+	case string:
+		*e = TenantInviteStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TenantInviteStatus: %T", src)
+	}
+	return nil
+}
+
+type NullTenantInviteStatus struct {
+	TenantInviteStatus TenantInviteStatus `json:"tenant_invite_status"`
+	Valid              bool               `json:"valid"` // Valid is true if TenantInviteStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTenantInviteStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.TenantInviteStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TenantInviteStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTenantInviteStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TenantInviteStatus), nil
+}
+
+type TenantMemberRole string
+
+const (
+	TenantMemberRoleOwner  TenantMemberRole = "owner"
+	TenantMemberRoleMember TenantMemberRole = "member"
+)
+
+func (e *TenantMemberRole) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TenantMemberRole(s)
+	case string:
+		*e = TenantMemberRole(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TenantMemberRole: %T", src)
+	}
+	return nil
+}
+
+type NullTenantMemberRole struct {
+	TenantMemberRole TenantMemberRole `json:"tenant_member_role"`
+	Valid            bool             `json:"valid"` // Valid is true if TenantMemberRole is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTenantMemberRole) Scan(value interface{}) error {
+	if value == nil {
+		ns.TenantMemberRole, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TenantMemberRole.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTenantMemberRole) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TenantMemberRole), nil
+}
+
+type TenantMemberStatus string
+
+const (
+	TenantMemberStatusPending TenantMemberStatus = "pending"
+	TenantMemberStatusActive  TenantMemberStatus = "active"
+	TenantMemberStatusRemoved TenantMemberStatus = "removed"
+)
+
+func (e *TenantMemberStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TenantMemberStatus(s)
+	case string:
+		*e = TenantMemberStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TenantMemberStatus: %T", src)
+	}
+	return nil
+}
+
+type NullTenantMemberStatus struct {
+	TenantMemberStatus TenantMemberStatus `json:"tenant_member_status"`
+	Valid              bool               `json:"valid"` // Valid is true if TenantMemberStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTenantMemberStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.TenantMemberStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TenantMemberStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTenantMemberStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TenantMemberStatus), nil
+}
+
 type UploadRequestSentVia string
 
 const (
@@ -799,6 +928,7 @@ type Achievement struct {
 	UserID     string             `json:"user_id"`
 	Type       string             `json:"type"`
 	AchievedAt pgtype.Timestamptz `json:"achieved_at"`
+	TenantID   pgtype.UUID        `json:"tenant_id"`
 }
 
 type Analytic struct {
@@ -821,6 +951,7 @@ type Brand struct {
 	WebsiteUrl     pgtype.Text        `json:"website_url"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	TenantID       pgtype.UUID        `json:"tenant_id"`
 }
 
 type Comparison struct {
@@ -845,6 +976,8 @@ type Comparison struct {
 	SpaceID         pgtype.UUID        `json:"space_id"`
 	Source          ComparisonSource   `json:"source"`
 	UploadRequestID pgtype.UUID        `json:"upload_request_id"`
+	TenantID        pgtype.UUID        `json:"tenant_id"`
+	CreatedBy       pgtype.Text        `json:"created_by"`
 }
 
 type ContentCalendar struct {
@@ -858,6 +991,7 @@ type ContentCalendar struct {
 	CaptionTemplate pgtype.Text        `json:"caption_template"`
 	Status          CalendarStatus     `json:"status"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	TenantID        pgtype.UUID        `json:"tenant_id"`
 }
 
 type ContentCalendarSetting struct {
@@ -868,6 +1002,7 @@ type ContentCalendarSetting struct {
 	PreferredContentTypes []byte             `json:"preferred_content_types"`
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+	TenantID              pgtype.UUID        `json:"tenant_id"`
 }
 
 type FormConfig struct {
@@ -879,6 +1014,7 @@ type FormConfig struct {
 	AutoReplyMessage pgtype.Text        `json:"auto_reply_message"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	TenantID         pgtype.UUID        `json:"tenant_id"`
 }
 
 type Gallery struct {
@@ -890,6 +1026,7 @@ type Gallery struct {
 	IsPublished bool               `json:"is_published"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	TenantID    pgtype.UUID        `json:"tenant_id"`
 }
 
 type GalleryComparison struct {
@@ -925,6 +1062,7 @@ type Lead struct {
 	SourceUrl     pgtype.Text        `json:"source_url"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	TenantID      pgtype.UUID        `json:"tenant_id"`
 }
 
 type Review struct {
@@ -942,6 +1080,7 @@ type Review struct {
 	Status           ReviewStatus       `json:"status"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	TenantID         pgtype.UUID        `json:"tenant_id"`
 }
 
 type Space struct {
@@ -960,14 +1099,42 @@ type Space struct {
 	Subdomain     pgtype.Text        `json:"subdomain"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	TenantID      pgtype.UUID        `json:"tenant_id"`
 }
 
-type TeamMember struct {
-	ID          pgtype.UUID        `json:"id"`
-	UserID      string             `json:"user_id"`
-	TeamOwnerID string             `json:"team_owner_id"`
-	Role        TeamRole           `json:"role"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+type Tenant struct {
+	ID                   pgtype.UUID        `json:"id"`
+	Name                 string             `json:"name"`
+	Slug                 string             `json:"slug"`
+	Plan                 UserPlan           `json:"plan"`
+	StripeCustomerID     pgtype.Text        `json:"stripe_customer_id"`
+	StripeSubscriptionID pgtype.Text        `json:"stripe_subscription_id"`
+	OwnerID              string             `json:"owner_id"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+}
+
+type TenantInvite struct {
+	ID        pgtype.UUID        `json:"id"`
+	TenantID  pgtype.UUID        `json:"tenant_id"`
+	Email     string             `json:"email"`
+	Role      TenantMemberRole   `json:"role"`
+	Token     string             `json:"token"`
+	InvitedBy string             `json:"invited_by"`
+	Status    TenantInviteStatus `json:"status"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type TenantMember struct {
+	ID        pgtype.UUID        `json:"id"`
+	TenantID  pgtype.UUID        `json:"tenant_id"`
+	UserID    string             `json:"user_id"`
+	Role      TenantMemberRole   `json:"role"`
+	InvitedBy pgtype.Text        `json:"invited_by"`
+	JoinedAt  pgtype.Timestamptz `json:"joined_at"`
+	Status    TenantMemberStatus `json:"status"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type Timeline struct {
@@ -983,6 +1150,7 @@ type Timeline struct {
 	IsPublic    bool               `json:"is_public"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	TenantID    pgtype.UUID        `json:"tenant_id"`
 }
 
 type TimelineEntry struct {
@@ -1019,17 +1187,16 @@ type UploadRequest struct {
 	ExpiresAt       pgtype.Timestamptz   `json:"expires_at"`
 	CreatedAt       pgtype.Timestamptz   `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz   `json:"updated_at"`
+	TenantID        pgtype.UUID          `json:"tenant_id"`
 }
 
 type User struct {
-	ID               string             `json:"id"`
-	Email            string             `json:"email"`
-	Name             string             `json:"name"`
-	AvatarUrl        pgtype.Text        `json:"avatar_url"`
-	Plan             UserPlan           `json:"plan"`
-	StripeCustomerID pgtype.Text        `json:"stripe_customer_id"`
-	CreatedAt        pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
-	CustomSubdomain  pgtype.Text        `json:"custom_subdomain"`
-	ApiKey           pgtype.Text        `json:"api_key"`
+	ID              string             `json:"id"`
+	Email           string             `json:"email"`
+	Name            string             `json:"name"`
+	AvatarUrl       pgtype.Text        `json:"avatar_url"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	CustomSubdomain pgtype.Text        `json:"custom_subdomain"`
+	ApiKey          pgtype.Text        `json:"api_key"`
 }

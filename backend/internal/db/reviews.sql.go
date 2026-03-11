@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countReviewsByTenantID = `-- name: CountReviewsByTenantID :one
+SELECT COUNT(*) FROM reviews WHERE tenant_id = $1
+`
+
+func (q *Queries) CountReviewsByTenantID(ctx context.Context, tenantID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countReviewsByTenantID, tenantID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countReviewsByUserID = `-- name: CountReviewsByUserID :one
 SELECT COUNT(*) FROM reviews WHERE user_id = $1
 `
@@ -23,9 +34,9 @@ func (q *Queries) CountReviewsByUserID(ctx context.Context, userID string) (int6
 }
 
 const createReview = `-- name: CreateReview :one
-INSERT INTO reviews (comparison_id, space_id, user_id, reviewer_name, reviewer_photo_url, reviewer_contact, rating, content)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, comparison_id, space_id, user_id, reviewer_name, reviewer_photo_url, reviewer_contact, rating, content, reply, reply_at, status, created_at, updated_at
+INSERT INTO reviews (comparison_id, space_id, user_id, reviewer_name, reviewer_photo_url, reviewer_contact, rating, content, tenant_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, comparison_id, space_id, user_id, reviewer_name, reviewer_photo_url, reviewer_contact, rating, content, reply, reply_at, status, created_at, updated_at, tenant_id
 `
 
 type CreateReviewParams struct {
@@ -37,6 +48,7 @@ type CreateReviewParams struct {
 	ReviewerContact  pgtype.Text `json:"reviewer_contact"`
 	Rating           int32       `json:"rating"`
 	Content          string      `json:"content"`
+	TenantID         pgtype.UUID `json:"tenant_id"`
 }
 
 func (q *Queries) CreateReview(ctx context.Context, arg CreateReviewParams) (Review, error) {
@@ -49,6 +61,7 @@ func (q *Queries) CreateReview(ctx context.Context, arg CreateReviewParams) (Rev
 		arg.ReviewerContact,
 		arg.Rating,
 		arg.Content,
+		arg.TenantID,
 	)
 	var i Review
 	err := row.Scan(
@@ -66,6 +79,7 @@ func (q *Queries) CreateReview(ctx context.Context, arg CreateReviewParams) (Rev
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
@@ -80,7 +94,7 @@ func (q *Queries) DeleteReview(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getReviewByID = `-- name: GetReviewByID :one
-SELECT id, comparison_id, space_id, user_id, reviewer_name, reviewer_photo_url, reviewer_contact, rating, content, reply, reply_at, status, created_at, updated_at FROM reviews WHERE id = $1
+SELECT id, comparison_id, space_id, user_id, reviewer_name, reviewer_photo_url, reviewer_contact, rating, content, reply, reply_at, status, created_at, updated_at, tenant_id FROM reviews WHERE id = $1
 `
 
 func (q *Queries) GetReviewByID(ctx context.Context, id pgtype.UUID) (Review, error) {
@@ -101,6 +115,7 @@ func (q *Queries) GetReviewByID(ctx context.Context, id pgtype.UUID) (Review, er
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
@@ -124,8 +139,27 @@ func (q *Queries) GetReviewStats(ctx context.Context, userID string) (GetReviewS
 	return i, err
 }
 
+const getReviewStatsByTenantID = `-- name: GetReviewStatsByTenantID :one
+SELECT COUNT(*) AS total, COALESCE(AVG(rating), 0)::float AS avg_rating,
+       COUNT(*) FILTER (WHERE status = 'published') AS published_count
+FROM reviews WHERE tenant_id = $1
+`
+
+type GetReviewStatsByTenantIDRow struct {
+	Total          int64   `json:"total"`
+	AvgRating      float64 `json:"avg_rating"`
+	PublishedCount int64   `json:"published_count"`
+}
+
+func (q *Queries) GetReviewStatsByTenantID(ctx context.Context, tenantID pgtype.UUID) (GetReviewStatsByTenantIDRow, error) {
+	row := q.db.QueryRow(ctx, getReviewStatsByTenantID, tenantID)
+	var i GetReviewStatsByTenantIDRow
+	err := row.Scan(&i.Total, &i.AvgRating, &i.PublishedCount)
+	return i, err
+}
+
 const listPublishedReviewsByUserID = `-- name: ListPublishedReviewsByUserID :many
-SELECT id, comparison_id, space_id, user_id, reviewer_name, reviewer_photo_url, reviewer_contact, rating, content, reply, reply_at, status, created_at, updated_at FROM reviews WHERE user_id = $1 AND status = 'published' ORDER BY created_at DESC LIMIT $2
+SELECT id, comparison_id, space_id, user_id, reviewer_name, reviewer_photo_url, reviewer_contact, rating, content, reply, reply_at, status, created_at, updated_at, tenant_id FROM reviews WHERE user_id = $1 AND status = 'published' ORDER BY created_at DESC LIMIT $2
 `
 
 type ListPublishedReviewsByUserIDParams struct {
@@ -157,6 +191,48 @@ func (q *Queries) ListPublishedReviewsByUserID(ctx context.Context, arg ListPubl
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TenantID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listReviewsByTenantID = `-- name: ListReviewsByTenantID :many
+SELECT id, comparison_id, space_id, user_id, reviewer_name, reviewer_photo_url, reviewer_contact, rating, content, reply, reply_at, status, created_at, updated_at, tenant_id FROM reviews WHERE tenant_id = $1 ORDER BY created_at DESC
+`
+
+// Tenant-scoped queries
+func (q *Queries) ListReviewsByTenantID(ctx context.Context, tenantID pgtype.UUID) ([]Review, error) {
+	rows, err := q.db.Query(ctx, listReviewsByTenantID, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Review{}
+	for rows.Next() {
+		var i Review
+		if err := rows.Scan(
+			&i.ID,
+			&i.ComparisonID,
+			&i.SpaceID,
+			&i.UserID,
+			&i.ReviewerName,
+			&i.ReviewerPhotoUrl,
+			&i.ReviewerContact,
+			&i.Rating,
+			&i.Content,
+			&i.Reply,
+			&i.ReplyAt,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.TenantID,
 		); err != nil {
 			return nil, err
 		}
@@ -169,7 +245,7 @@ func (q *Queries) ListPublishedReviewsByUserID(ctx context.Context, arg ListPubl
 }
 
 const listReviewsByUserIDs = `-- name: ListReviewsByUserIDs :many
-SELECT id, comparison_id, space_id, user_id, reviewer_name, reviewer_photo_url, reviewer_contact, rating, content, reply, reply_at, status, created_at, updated_at FROM reviews WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC
+SELECT id, comparison_id, space_id, user_id, reviewer_name, reviewer_photo_url, reviewer_contact, rating, content, reply, reply_at, status, created_at, updated_at, tenant_id FROM reviews WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC
 `
 
 func (q *Queries) ListReviewsByUserIDs(ctx context.Context, dollar_1 []string) ([]Review, error) {
@@ -196,6 +272,7 @@ func (q *Queries) ListReviewsByUserIDs(ctx context.Context, dollar_1 []string) (
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TenantID,
 		); err != nil {
 			return nil, err
 		}

@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countLeadsByTenantIDThisMonth = `-- name: CountLeadsByTenantIDThisMonth :one
+SELECT COUNT(*) FROM leads WHERE tenant_id = $1 AND created_at >= date_trunc('month', now())
+`
+
+func (q *Queries) CountLeadsByTenantIDThisMonth(ctx context.Context, tenantID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countLeadsByTenantIDThisMonth, tenantID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countLeadsByUserIDThisMonth = `-- name: CountLeadsByUserIDThisMonth :one
 SELECT COUNT(*) FROM leads WHERE user_id = $1 AND created_at >= date_trunc('month', now())
 `
@@ -23,9 +34,9 @@ func (q *Queries) CountLeadsByUserIDThisMonth(ctx context.Context, userID string
 }
 
 const createLead = `-- name: CreateLead :one
-INSERT INTO leads (user_id, comparison_id, space_id, type, name, phone, email, service, preferred_date, preferred_time, message, source_url)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-RETURNING id, user_id, comparison_id, space_id, type, name, phone, email, service, preferred_date, preferred_time, message, status, source_url, created_at, updated_at
+INSERT INTO leads (user_id, comparison_id, space_id, type, name, phone, email, service, preferred_date, preferred_time, message, source_url, tenant_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+RETURNING id, user_id, comparison_id, space_id, type, name, phone, email, service, preferred_date, preferred_time, message, status, source_url, created_at, updated_at, tenant_id
 `
 
 type CreateLeadParams struct {
@@ -41,6 +52,7 @@ type CreateLeadParams struct {
 	PreferredTime pgtype.Text `json:"preferred_time"`
 	Message       pgtype.Text `json:"message"`
 	SourceUrl     pgtype.Text `json:"source_url"`
+	TenantID      pgtype.UUID `json:"tenant_id"`
 }
 
 func (q *Queries) CreateLead(ctx context.Context, arg CreateLeadParams) (Lead, error) {
@@ -57,6 +69,7 @@ func (q *Queries) CreateLead(ctx context.Context, arg CreateLeadParams) (Lead, e
 		arg.PreferredTime,
 		arg.Message,
 		arg.SourceUrl,
+		arg.TenantID,
 	)
 	var i Lead
 	err := row.Scan(
@@ -76,12 +89,13 @@ func (q *Queries) CreateLead(ctx context.Context, arg CreateLeadParams) (Lead, e
 		&i.SourceUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
 
 const getFormConfig = `-- name: GetFormConfig :one
-SELECT id, user_id, form_type, services, whatsapp_number, auto_reply_message, created_at, updated_at FROM form_configs WHERE user_id = $1
+SELECT id, user_id, form_type, services, whatsapp_number, auto_reply_message, created_at, updated_at, tenant_id FROM form_configs WHERE user_id = $1
 `
 
 func (q *Queries) GetFormConfig(ctx context.Context, userID string) (FormConfig, error) {
@@ -96,12 +110,34 @@ func (q *Queries) GetFormConfig(ctx context.Context, userID string) (FormConfig,
 		&i.AutoReplyMessage,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
+	)
+	return i, err
+}
+
+const getFormConfigByTenantID = `-- name: GetFormConfigByTenantID :one
+SELECT id, user_id, form_type, services, whatsapp_number, auto_reply_message, created_at, updated_at, tenant_id FROM form_configs WHERE tenant_id = $1
+`
+
+func (q *Queries) GetFormConfigByTenantID(ctx context.Context, tenantID pgtype.UUID) (FormConfig, error) {
+	row := q.db.QueryRow(ctx, getFormConfigByTenantID, tenantID)
+	var i FormConfig
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FormType,
+		&i.Services,
+		&i.WhatsappNumber,
+		&i.AutoReplyMessage,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
 
 const getLeadByID = `-- name: GetLeadByID :one
-SELECT id, user_id, comparison_id, space_id, type, name, phone, email, service, preferred_date, preferred_time, message, status, source_url, created_at, updated_at FROM leads WHERE id = $1
+SELECT id, user_id, comparison_id, space_id, type, name, phone, email, service, preferred_date, preferred_time, message, status, source_url, created_at, updated_at, tenant_id FROM leads WHERE id = $1
 `
 
 func (q *Queries) GetLeadByID(ctx context.Context, id pgtype.UUID) (Lead, error) {
@@ -124,6 +160,7 @@ func (q *Queries) GetLeadByID(ctx context.Context, id pgtype.UUID) (Lead, error)
 		&i.SourceUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
@@ -148,8 +185,71 @@ func (q *Queries) GetLeadStats(ctx context.Context, userID string) (GetLeadStats
 	return i, err
 }
 
+const getLeadStatsByTenantID = `-- name: GetLeadStatsByTenantID :one
+SELECT COUNT(*) AS total,
+       COUNT(*) FILTER (WHERE status = 'new') AS new_count,
+       COUNT(*) FILTER (WHERE status = 'booked') AS booked_count
+FROM leads WHERE tenant_id = $1
+`
+
+type GetLeadStatsByTenantIDRow struct {
+	Total       int64 `json:"total"`
+	NewCount    int64 `json:"new_count"`
+	BookedCount int64 `json:"booked_count"`
+}
+
+func (q *Queries) GetLeadStatsByTenantID(ctx context.Context, tenantID pgtype.UUID) (GetLeadStatsByTenantIDRow, error) {
+	row := q.db.QueryRow(ctx, getLeadStatsByTenantID, tenantID)
+	var i GetLeadStatsByTenantIDRow
+	err := row.Scan(&i.Total, &i.NewCount, &i.BookedCount)
+	return i, err
+}
+
+const listLeadsByTenantID = `-- name: ListLeadsByTenantID :many
+SELECT id, user_id, comparison_id, space_id, type, name, phone, email, service, preferred_date, preferred_time, message, status, source_url, created_at, updated_at, tenant_id FROM leads WHERE tenant_id = $1 ORDER BY created_at DESC
+`
+
+// Tenant-scoped queries
+func (q *Queries) ListLeadsByTenantID(ctx context.Context, tenantID pgtype.UUID) ([]Lead, error) {
+	rows, err := q.db.Query(ctx, listLeadsByTenantID, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Lead{}
+	for rows.Next() {
+		var i Lead
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.ComparisonID,
+			&i.SpaceID,
+			&i.Type,
+			&i.Name,
+			&i.Phone,
+			&i.Email,
+			&i.Service,
+			&i.PreferredDate,
+			&i.PreferredTime,
+			&i.Message,
+			&i.Status,
+			&i.SourceUrl,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.TenantID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listLeadsByUserIDs = `-- name: ListLeadsByUserIDs :many
-SELECT id, user_id, comparison_id, space_id, type, name, phone, email, service, preferred_date, preferred_time, message, status, source_url, created_at, updated_at FROM leads WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC
+SELECT id, user_id, comparison_id, space_id, type, name, phone, email, service, preferred_date, preferred_time, message, status, source_url, created_at, updated_at, tenant_id FROM leads WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC
 `
 
 func (q *Queries) ListLeadsByUserIDs(ctx context.Context, dollar_1 []string) ([]Lead, error) {
@@ -178,6 +278,7 @@ func (q *Queries) ListLeadsByUserIDs(ctx context.Context, dollar_1 []string) ([]
 			&i.SourceUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TenantID,
 		); err != nil {
 			return nil, err
 		}
@@ -204,14 +305,14 @@ func (q *Queries) UpdateLeadStatus(ctx context.Context, arg UpdateLeadStatusPara
 }
 
 const upsertFormConfig = `-- name: UpsertFormConfig :one
-INSERT INTO form_configs (user_id, form_type, services, whatsapp_number, auto_reply_message)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO form_configs (user_id, form_type, services, whatsapp_number, auto_reply_message, tenant_id)
+VALUES ($1, $2, $3, $4, $5, $6)
 ON CONFLICT (user_id) DO UPDATE SET
     form_type = EXCLUDED.form_type,
     services = EXCLUDED.services,
     whatsapp_number = EXCLUDED.whatsapp_number,
     auto_reply_message = EXCLUDED.auto_reply_message
-RETURNING id, user_id, form_type, services, whatsapp_number, auto_reply_message, created_at, updated_at
+RETURNING id, user_id, form_type, services, whatsapp_number, auto_reply_message, created_at, updated_at, tenant_id
 `
 
 type UpsertFormConfigParams struct {
@@ -220,6 +321,7 @@ type UpsertFormConfigParams struct {
 	Services         []byte      `json:"services"`
 	WhatsappNumber   pgtype.Text `json:"whatsapp_number"`
 	AutoReplyMessage pgtype.Text `json:"auto_reply_message"`
+	TenantID         pgtype.UUID `json:"tenant_id"`
 }
 
 func (q *Queries) UpsertFormConfig(ctx context.Context, arg UpsertFormConfigParams) (FormConfig, error) {
@@ -229,6 +331,7 @@ func (q *Queries) UpsertFormConfig(ctx context.Context, arg UpsertFormConfigPara
 		arg.Services,
 		arg.WhatsappNumber,
 		arg.AutoReplyMessage,
+		arg.TenantID,
 	)
 	var i FormConfig
 	err := row.Scan(
@@ -240,6 +343,51 @@ func (q *Queries) UpsertFormConfig(ctx context.Context, arg UpsertFormConfigPara
 		&i.AutoReplyMessage,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
+	)
+	return i, err
+}
+
+const upsertFormConfigByTenantID = `-- name: UpsertFormConfigByTenantID :one
+INSERT INTO form_configs (user_id, form_type, services, whatsapp_number, auto_reply_message, tenant_id)
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (user_id) DO UPDATE SET
+    form_type = EXCLUDED.form_type,
+    services = EXCLUDED.services,
+    whatsapp_number = EXCLUDED.whatsapp_number,
+    auto_reply_message = EXCLUDED.auto_reply_message
+RETURNING id, user_id, form_type, services, whatsapp_number, auto_reply_message, created_at, updated_at, tenant_id
+`
+
+type UpsertFormConfigByTenantIDParams struct {
+	UserID           string      `json:"user_id"`
+	FormType         FormType    `json:"form_type"`
+	Services         []byte      `json:"services"`
+	WhatsappNumber   pgtype.Text `json:"whatsapp_number"`
+	AutoReplyMessage pgtype.Text `json:"auto_reply_message"`
+	TenantID         pgtype.UUID `json:"tenant_id"`
+}
+
+func (q *Queries) UpsertFormConfigByTenantID(ctx context.Context, arg UpsertFormConfigByTenantIDParams) (FormConfig, error) {
+	row := q.db.QueryRow(ctx, upsertFormConfigByTenantID,
+		arg.UserID,
+		arg.FormType,
+		arg.Services,
+		arg.WhatsappNumber,
+		arg.AutoReplyMessage,
+		arg.TenantID,
+	)
+	var i FormConfig
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FormType,
+		&i.Services,
+		&i.WhatsappNumber,
+		&i.AutoReplyMessage,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }

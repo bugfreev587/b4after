@@ -12,9 +12,9 @@ import (
 )
 
 const createContentCalendarEntry = `-- name: CreateContentCalendarEntry :one
-INSERT INTO content_calendar (user_id, comparison_id, review_id, scheduled_date, content_type, platform, caption_template)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, user_id, comparison_id, review_id, scheduled_date, content_type, platform, caption_template, status, created_at
+INSERT INTO content_calendar (user_id, comparison_id, review_id, scheduled_date, content_type, platform, caption_template, tenant_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id, user_id, comparison_id, review_id, scheduled_date, content_type, platform, caption_template, status, created_at, tenant_id
 `
 
 type CreateContentCalendarEntryParams struct {
@@ -25,6 +25,7 @@ type CreateContentCalendarEntryParams struct {
 	ContentType     ContentType     `json:"content_type"`
 	Platform        ContentPlatform `json:"platform"`
 	CaptionTemplate pgtype.Text     `json:"caption_template"`
+	TenantID        pgtype.UUID     `json:"tenant_id"`
 }
 
 func (q *Queries) CreateContentCalendarEntry(ctx context.Context, arg CreateContentCalendarEntryParams) (ContentCalendar, error) {
@@ -36,6 +37,7 @@ func (q *Queries) CreateContentCalendarEntry(ctx context.Context, arg CreateCont
 		arg.ContentType,
 		arg.Platform,
 		arg.CaptionTemplate,
+		arg.TenantID,
 	)
 	var i ContentCalendar
 	err := row.Scan(
@@ -49,6 +51,7 @@ func (q *Queries) CreateContentCalendarEntry(ctx context.Context, arg CreateCont
 		&i.CaptionTemplate,
 		&i.Status,
 		&i.CreatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
@@ -69,7 +72,7 @@ func (q *Queries) DeleteContentCalendarByDateRange(ctx context.Context, arg Dele
 }
 
 const getContentCalendarSettings = `-- name: GetContentCalendarSettings :one
-SELECT id, user_id, weekly_frequency, preferred_platforms, preferred_content_types, created_at, updated_at FROM content_calendar_settings WHERE user_id = $1
+SELECT id, user_id, weekly_frequency, preferred_platforms, preferred_content_types, created_at, updated_at, tenant_id FROM content_calendar_settings WHERE user_id = $1
 `
 
 func (q *Queries) GetContentCalendarSettings(ctx context.Context, userID string) (ContentCalendarSetting, error) {
@@ -83,12 +86,33 @@ func (q *Queries) GetContentCalendarSettings(ctx context.Context, userID string)
 		&i.PreferredContentTypes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
+	)
+	return i, err
+}
+
+const getContentCalendarSettingsByTenantID = `-- name: GetContentCalendarSettingsByTenantID :one
+SELECT id, user_id, weekly_frequency, preferred_platforms, preferred_content_types, created_at, updated_at, tenant_id FROM content_calendar_settings WHERE tenant_id = $1
+`
+
+func (q *Queries) GetContentCalendarSettingsByTenantID(ctx context.Context, tenantID pgtype.UUID) (ContentCalendarSetting, error) {
+	row := q.db.QueryRow(ctx, getContentCalendarSettingsByTenantID, tenantID)
+	var i ContentCalendarSetting
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.WeeklyFrequency,
+		&i.PreferredPlatforms,
+		&i.PreferredContentTypes,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
 
 const listContentCalendarByDateRange = `-- name: ListContentCalendarByDateRange :many
-SELECT id, user_id, comparison_id, review_id, scheduled_date, content_type, platform, caption_template, status, created_at FROM content_calendar WHERE user_id = $1 AND scheduled_date >= $2 AND scheduled_date <= $3
+SELECT id, user_id, comparison_id, review_id, scheduled_date, content_type, platform, caption_template, status, created_at, tenant_id FROM content_calendar WHERE user_id = $1 AND scheduled_date >= $2 AND scheduled_date <= $3
 ORDER BY scheduled_date ASC, created_at ASC
 `
 
@@ -118,6 +142,51 @@ func (q *Queries) ListContentCalendarByDateRange(ctx context.Context, arg ListCo
 			&i.CaptionTemplate,
 			&i.Status,
 			&i.CreatedAt,
+			&i.TenantID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listContentCalendarByTenantID = `-- name: ListContentCalendarByTenantID :many
+SELECT id, user_id, comparison_id, review_id, scheduled_date, content_type, platform, caption_template, status, created_at, tenant_id FROM content_calendar WHERE tenant_id = $1 AND scheduled_date >= $2 AND scheduled_date <= $3
+ORDER BY scheduled_date ASC, created_at ASC
+`
+
+type ListContentCalendarByTenantIDParams struct {
+	TenantID        pgtype.UUID `json:"tenant_id"`
+	ScheduledDate   pgtype.Date `json:"scheduled_date"`
+	ScheduledDate_2 pgtype.Date `json:"scheduled_date_2"`
+}
+
+// Tenant-scoped queries
+func (q *Queries) ListContentCalendarByTenantID(ctx context.Context, arg ListContentCalendarByTenantIDParams) ([]ContentCalendar, error) {
+	rows, err := q.db.Query(ctx, listContentCalendarByTenantID, arg.TenantID, arg.ScheduledDate, arg.ScheduledDate_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ContentCalendar{}
+	for rows.Next() {
+		var i ContentCalendar
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.ComparisonID,
+			&i.ReviewID,
+			&i.ScheduledDate,
+			&i.ContentType,
+			&i.Platform,
+			&i.CaptionTemplate,
+			&i.Status,
+			&i.CreatedAt,
+			&i.TenantID,
 		); err != nil {
 			return nil, err
 		}
@@ -144,20 +213,21 @@ func (q *Queries) UpdateContentCalendarStatus(ctx context.Context, arg UpdateCon
 }
 
 const upsertContentCalendarSettings = `-- name: UpsertContentCalendarSettings :one
-INSERT INTO content_calendar_settings (user_id, weekly_frequency, preferred_platforms, preferred_content_types)
-VALUES ($1, $2, $3, $4)
+INSERT INTO content_calendar_settings (user_id, weekly_frequency, preferred_platforms, preferred_content_types, tenant_id)
+VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT (user_id) DO UPDATE SET
     weekly_frequency = EXCLUDED.weekly_frequency,
     preferred_platforms = EXCLUDED.preferred_platforms,
     preferred_content_types = EXCLUDED.preferred_content_types
-RETURNING id, user_id, weekly_frequency, preferred_platforms, preferred_content_types, created_at, updated_at
+RETURNING id, user_id, weekly_frequency, preferred_platforms, preferred_content_types, created_at, updated_at, tenant_id
 `
 
 type UpsertContentCalendarSettingsParams struct {
-	UserID                string `json:"user_id"`
-	WeeklyFrequency       int32  `json:"weekly_frequency"`
-	PreferredPlatforms    []byte `json:"preferred_platforms"`
-	PreferredContentTypes []byte `json:"preferred_content_types"`
+	UserID                string      `json:"user_id"`
+	WeeklyFrequency       int32       `json:"weekly_frequency"`
+	PreferredPlatforms    []byte      `json:"preferred_platforms"`
+	PreferredContentTypes []byte      `json:"preferred_content_types"`
+	TenantID              pgtype.UUID `json:"tenant_id"`
 }
 
 func (q *Queries) UpsertContentCalendarSettings(ctx context.Context, arg UpsertContentCalendarSettingsParams) (ContentCalendarSetting, error) {
@@ -166,6 +236,7 @@ func (q *Queries) UpsertContentCalendarSettings(ctx context.Context, arg UpsertC
 		arg.WeeklyFrequency,
 		arg.PreferredPlatforms,
 		arg.PreferredContentTypes,
+		arg.TenantID,
 	)
 	var i ContentCalendarSetting
 	err := row.Scan(
@@ -176,6 +247,47 @@ func (q *Queries) UpsertContentCalendarSettings(ctx context.Context, arg UpsertC
 		&i.PreferredContentTypes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
+	)
+	return i, err
+}
+
+const upsertContentCalendarSettingsByTenantID = `-- name: UpsertContentCalendarSettingsByTenantID :one
+INSERT INTO content_calendar_settings (user_id, weekly_frequency, preferred_platforms, preferred_content_types, tenant_id)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (user_id) DO UPDATE SET
+    weekly_frequency = EXCLUDED.weekly_frequency,
+    preferred_platforms = EXCLUDED.preferred_platforms,
+    preferred_content_types = EXCLUDED.preferred_content_types
+RETURNING id, user_id, weekly_frequency, preferred_platforms, preferred_content_types, created_at, updated_at, tenant_id
+`
+
+type UpsertContentCalendarSettingsByTenantIDParams struct {
+	UserID                string      `json:"user_id"`
+	WeeklyFrequency       int32       `json:"weekly_frequency"`
+	PreferredPlatforms    []byte      `json:"preferred_platforms"`
+	PreferredContentTypes []byte      `json:"preferred_content_types"`
+	TenantID              pgtype.UUID `json:"tenant_id"`
+}
+
+func (q *Queries) UpsertContentCalendarSettingsByTenantID(ctx context.Context, arg UpsertContentCalendarSettingsByTenantIDParams) (ContentCalendarSetting, error) {
+	row := q.db.QueryRow(ctx, upsertContentCalendarSettingsByTenantID,
+		arg.UserID,
+		arg.WeeklyFrequency,
+		arg.PreferredPlatforms,
+		arg.PreferredContentTypes,
+		arg.TenantID,
+	)
+	var i ContentCalendarSetting
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.WeeklyFrequency,
+		&i.PreferredPlatforms,
+		&i.PreferredContentTypes,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }

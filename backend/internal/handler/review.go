@@ -47,14 +47,16 @@ func (h *ReviewHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Enforce plan limit: free = 10 total reviews
-	user, err := h.queries.GetUserByID(r.Context(), merchantUserID)
+	// Find the tenant for this merchant
+	tenant, err := h.queries.GetTenantByOwnerID(r.Context(), merchantUserID)
 	if err != nil {
 		Error(w, http.StatusNotFound, "merchant not found")
 		return
 	}
-	if user.Plan == db.UserPlanFree {
-		count, err := h.queries.CountReviewsByUserID(r.Context(), merchantUserID)
+
+	// Enforce plan limit: free = 10 total reviews
+	if tenant.Plan == db.UserPlanFree {
+		count, err := h.queries.CountReviewsByTenantID(r.Context(), tenant.ID)
 		if err != nil {
 			Error(w, http.StatusInternalServerError, "failed to count reviews")
 			return
@@ -71,6 +73,7 @@ func (h *ReviewHandler) Create(w http.ResponseWriter, r *http.Request) {
 		ReviewerContact: pgtype.Text{String: req.ReviewerContact, Valid: req.ReviewerContact != ""},
 		Rating:          int32(req.Rating),
 		Content:         req.Content,
+		TenantID:        tenant.ID,
 	}
 	if req.ComparisonID != "" {
 		uid, err := uuid.Parse(req.ComparisonID)
@@ -95,19 +98,9 @@ func (h *ReviewHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ReviewHandler) List(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
-	userIDs, err := middleware.GetAccessibleUserIDs(r.Context(), h.queries, userID)
-	if err != nil {
-		Error(w, http.StatusInternalServerError, "failed to get accessible users")
-		return
-	}
-
-	reviews, err := h.queries.ListReviewsByUserIDs(r.Context(), userIDs)
+	reviews, err := h.queries.ListReviewsByTenantID(r.Context(), tenantID)
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to list reviews")
 		return
@@ -134,11 +127,7 @@ func (h *ReviewHandler) Hide(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ReviewHandler) setStatus(w http.ResponseWriter, r *http.Request, status db.ReviewStatus) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
 	id := chi.URLParam(r, "id")
 	uid, err := uuid.Parse(id)
@@ -152,7 +141,7 @@ func (h *ReviewHandler) setStatus(w http.ResponseWriter, r *http.Request, status
 		Error(w, http.StatusNotFound, "review not found")
 		return
 	}
-	if !middleware.CanAccessResource(r.Context(), h.queries, userID, review.UserID) {
+	if review.TenantID != tenantID {
 		Error(w, http.StatusForbidden, "not your review")
 		return
 	}
@@ -173,11 +162,7 @@ type replyReviewRequest struct {
 }
 
 func (h *ReviewHandler) Reply(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
 	id := chi.URLParam(r, "id")
 	uid, err := uuid.Parse(id)
@@ -191,7 +176,7 @@ func (h *ReviewHandler) Reply(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusNotFound, "review not found")
 		return
 	}
-	if !middleware.CanAccessResource(r.Context(), h.queries, userID, review.UserID) {
+	if review.TenantID != tenantID {
 		Error(w, http.StatusForbidden, "not your review")
 		return
 	}
@@ -214,11 +199,7 @@ func (h *ReviewHandler) Reply(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ReviewHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
 	id := chi.URLParam(r, "id")
 	uid, err := uuid.Parse(id)
@@ -232,7 +213,7 @@ func (h *ReviewHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusNotFound, "review not found")
 		return
 	}
-	if !middleware.CanAccessResource(r.Context(), h.queries, userID, review.UserID) {
+	if review.TenantID != tenantID {
 		Error(w, http.StatusForbidden, "not your review")
 		return
 	}
@@ -249,14 +230,15 @@ func (h *ReviewHandler) Delete(w http.ResponseWriter, r *http.Request) {
 func (h *ReviewHandler) GetPublicReviews(w http.ResponseWriter, r *http.Request) {
 	merchantUserID := chi.URLParam(r, "userId")
 
-	user, err := h.queries.GetUserByID(r.Context(), merchantUserID)
+	// Find the tenant for this merchant to check plan
+	tenant, err := h.queries.GetTenantByOwnerID(r.Context(), merchantUserID)
 	if err != nil {
 		Error(w, http.StatusNotFound, "merchant not found")
 		return
 	}
 
 	var limit int32 = 5
-	if user.Plan != db.UserPlanFree {
+	if tenant.Plan != db.UserPlanFree {
 		limit = 100
 	}
 
@@ -277,13 +259,9 @@ func (h *ReviewHandler) GetPublicReviews(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *ReviewHandler) GetStats(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
-	stats, err := h.queries.GetReviewStats(r.Context(), userID)
+	stats, err := h.queries.GetReviewStatsByTenantID(r.Context(), tenantID)
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to get review stats")
 		return

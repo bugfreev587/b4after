@@ -22,6 +22,17 @@ func (q *Queries) CountTimelineEntriesByTimelineID(ctx context.Context, timeline
 	return count, err
 }
 
+const countTimelinesByTenantID = `-- name: CountTimelinesByTenantID :one
+SELECT COUNT(*) FROM timelines WHERE tenant_id = $1
+`
+
+func (q *Queries) CountTimelinesByTenantID(ctx context.Context, tenantID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countTimelinesByTenantID, tenantID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countTimelinesByUserID = `-- name: CountTimelinesByUserID :one
 SELECT COUNT(*) FROM timelines WHERE user_id = $1
 `
@@ -34,9 +45,9 @@ func (q *Queries) CountTimelinesByUserID(ctx context.Context, userID string) (in
 }
 
 const createTimeline = `-- name: CreateTimeline :one
-INSERT INTO timelines (user_id, space_id, slug, title, description, category, cta_text, cta_url, is_public)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id, user_id, space_id, slug, title, description, category, cta_text, cta_url, is_public, created_at, updated_at
+INSERT INTO timelines (user_id, space_id, slug, title, description, category, cta_text, cta_url, is_public, tenant_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING id, user_id, space_id, slug, title, description, category, cta_text, cta_url, is_public, created_at, updated_at, tenant_id
 `
 
 type CreateTimelineParams struct {
@@ -49,6 +60,7 @@ type CreateTimelineParams struct {
 	CtaText     pgtype.Text `json:"cta_text"`
 	CtaUrl      pgtype.Text `json:"cta_url"`
 	IsPublic    bool        `json:"is_public"`
+	TenantID    pgtype.UUID `json:"tenant_id"`
 }
 
 func (q *Queries) CreateTimeline(ctx context.Context, arg CreateTimelineParams) (Timeline, error) {
@@ -62,6 +74,7 @@ func (q *Queries) CreateTimeline(ctx context.Context, arg CreateTimelineParams) 
 		arg.CtaText,
 		arg.CtaUrl,
 		arg.IsPublic,
+		arg.TenantID,
 	)
 	var i Timeline
 	err := row.Scan(
@@ -77,6 +90,7 @@ func (q *Queries) CreateTimeline(ctx context.Context, arg CreateTimelineParams) 
 		&i.IsPublic,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
@@ -138,7 +152,7 @@ func (q *Queries) DeleteTimelineEntry(ctx context.Context, id pgtype.UUID) error
 }
 
 const getPublicTimelineBySlug = `-- name: GetPublicTimelineBySlug :one
-SELECT id, user_id, space_id, slug, title, description, category, cta_text, cta_url, is_public, created_at, updated_at FROM timelines WHERE slug = $1 AND is_public = true
+SELECT id, user_id, space_id, slug, title, description, category, cta_text, cta_url, is_public, created_at, updated_at, tenant_id FROM timelines WHERE slug = $1 AND is_public = true
 `
 
 func (q *Queries) GetPublicTimelineBySlug(ctx context.Context, slug string) (Timeline, error) {
@@ -157,12 +171,13 @@ func (q *Queries) GetPublicTimelineBySlug(ctx context.Context, slug string) (Tim
 		&i.IsPublic,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
 
 const getTimelineByID = `-- name: GetTimelineByID :one
-SELECT id, user_id, space_id, slug, title, description, category, cta_text, cta_url, is_public, created_at, updated_at FROM timelines WHERE id = $1
+SELECT id, user_id, space_id, slug, title, description, category, cta_text, cta_url, is_public, created_at, updated_at, tenant_id FROM timelines WHERE id = $1
 `
 
 func (q *Queries) GetTimelineByID(ctx context.Context, id pgtype.UUID) (Timeline, error) {
@@ -181,12 +196,13 @@ func (q *Queries) GetTimelineByID(ctx context.Context, id pgtype.UUID) (Timeline
 		&i.IsPublic,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
 
 const getTimelineBySlug = `-- name: GetTimelineBySlug :one
-SELECT id, user_id, space_id, slug, title, description, category, cta_text, cta_url, is_public, created_at, updated_at FROM timelines WHERE slug = $1
+SELECT id, user_id, space_id, slug, title, description, category, cta_text, cta_url, is_public, created_at, updated_at, tenant_id FROM timelines WHERE slug = $1
 `
 
 func (q *Queries) GetTimelineBySlug(ctx context.Context, slug string) (Timeline, error) {
@@ -205,6 +221,7 @@ func (q *Queries) GetTimelineBySlug(ctx context.Context, slug string) (Timeline,
 		&i.IsPublic,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
@@ -242,8 +259,47 @@ func (q *Queries) ListTimelineEntries(ctx context.Context, timelineID pgtype.UUI
 	return items, nil
 }
 
+const listTimelinesByTenantID = `-- name: ListTimelinesByTenantID :many
+SELECT id, user_id, space_id, slug, title, description, category, cta_text, cta_url, is_public, created_at, updated_at, tenant_id FROM timelines WHERE tenant_id = $1 ORDER BY created_at DESC
+`
+
+// Tenant-scoped queries
+func (q *Queries) ListTimelinesByTenantID(ctx context.Context, tenantID pgtype.UUID) ([]Timeline, error) {
+	rows, err := q.db.Query(ctx, listTimelinesByTenantID, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Timeline{}
+	for rows.Next() {
+		var i Timeline
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.SpaceID,
+			&i.Slug,
+			&i.Title,
+			&i.Description,
+			&i.Category,
+			&i.CtaText,
+			&i.CtaUrl,
+			&i.IsPublic,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.TenantID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTimelinesByUserIDs = `-- name: ListTimelinesByUserIDs :many
-SELECT id, user_id, space_id, slug, title, description, category, cta_text, cta_url, is_public, created_at, updated_at FROM timelines WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC
+SELECT id, user_id, space_id, slug, title, description, category, cta_text, cta_url, is_public, created_at, updated_at, tenant_id FROM timelines WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC
 `
 
 func (q *Queries) ListTimelinesByUserIDs(ctx context.Context, dollar_1 []string) ([]Timeline, error) {
@@ -268,6 +324,7 @@ func (q *Queries) ListTimelinesByUserIDs(ctx context.Context, dollar_1 []string)
 			&i.IsPublic,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TenantID,
 		); err != nil {
 			return nil, err
 		}
@@ -295,7 +352,7 @@ func (q *Queries) ReorderTimelineEntry(ctx context.Context, arg ReorderTimelineE
 
 const updateTimeline = `-- name: UpdateTimeline :one
 UPDATE timelines SET title = $2, description = $3, category = $4, cta_text = $5, cta_url = $6, is_public = $7
-WHERE id = $1 RETURNING id, user_id, space_id, slug, title, description, category, cta_text, cta_url, is_public, created_at, updated_at
+WHERE id = $1 RETURNING id, user_id, space_id, slug, title, description, category, cta_text, cta_url, is_public, created_at, updated_at, tenant_id
 `
 
 type UpdateTimelineParams struct {
@@ -332,6 +389,7 @@ func (q *Queries) UpdateTimeline(ctx context.Context, arg UpdateTimelineParams) 
 		&i.IsPublic,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }

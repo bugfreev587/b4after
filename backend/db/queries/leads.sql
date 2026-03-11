@@ -1,6 +1,6 @@
 -- name: CreateLead :one
-INSERT INTO leads (user_id, comparison_id, space_id, type, name, phone, email, service, preferred_date, preferred_time, message, source_url)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+INSERT INTO leads (user_id, comparison_id, space_id, type, name, phone, email, service, preferred_date, preferred_time, message, source_url, tenant_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 RETURNING *;
 
 -- name: GetLeadByID :one
@@ -25,8 +25,34 @@ FROM leads WHERE user_id = $1;
 SELECT * FROM form_configs WHERE user_id = $1;
 
 -- name: UpsertFormConfig :one
-INSERT INTO form_configs (user_id, form_type, services, whatsapp_number, auto_reply_message)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO form_configs (user_id, form_type, services, whatsapp_number, auto_reply_message, tenant_id)
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (user_id) DO UPDATE SET
+    form_type = EXCLUDED.form_type,
+    services = EXCLUDED.services,
+    whatsapp_number = EXCLUDED.whatsapp_number,
+    auto_reply_message = EXCLUDED.auto_reply_message
+RETURNING *;
+
+-- Tenant-scoped queries
+-- name: ListLeadsByTenantID :many
+SELECT * FROM leads WHERE tenant_id = $1 ORDER BY created_at DESC;
+
+-- name: CountLeadsByTenantIDThisMonth :one
+SELECT COUNT(*) FROM leads WHERE tenant_id = $1 AND created_at >= date_trunc('month', now());
+
+-- name: GetLeadStatsByTenantID :one
+SELECT COUNT(*) AS total,
+       COUNT(*) FILTER (WHERE status = 'new') AS new_count,
+       COUNT(*) FILTER (WHERE status = 'booked') AS booked_count
+FROM leads WHERE tenant_id = $1;
+
+-- name: GetFormConfigByTenantID :one
+SELECT * FROM form_configs WHERE tenant_id = $1;
+
+-- name: UpsertFormConfigByTenantID :one
+INSERT INTO form_configs (user_id, form_type, services, whatsapp_number, auto_reply_message, tenant_id)
+VALUES ($1, $2, $3, $4, $5, $6)
 ON CONFLICT (user_id) DO UPDATE SET
     form_type = EXCLUDED.form_type,
     services = EXCLUDED.services,

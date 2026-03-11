@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countSpacesByTenantID = `-- name: CountSpacesByTenantID :one
+SELECT COUNT(*) FROM spaces WHERE tenant_id = $1
+`
+
+func (q *Queries) CountSpacesByTenantID(ctx context.Context, tenantID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countSpacesByTenantID, tenantID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countSpacesByUserID = `-- name: CountSpacesByUserID :one
 SELECT COUNT(*) FROM spaces WHERE user_id = $1
 `
@@ -23,9 +34,9 @@ func (q *Queries) CountSpacesByUserID(ctx context.Context, userID string) (int64
 }
 
 const createSpace = `-- name: CreateSpace :one
-INSERT INTO spaces (user_id, slug, name, description, category, cover_image_url, services, cta_text, cta_url, cta_type, is_public)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-RETURNING id, user_id, slug, name, description, category, cover_image_url, services, cta_text, cta_url, cta_type, is_public, subdomain, created_at, updated_at
+INSERT INTO spaces (user_id, slug, name, description, category, cover_image_url, services, cta_text, cta_url, cta_type, is_public, tenant_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+RETURNING id, user_id, slug, name, description, category, cover_image_url, services, cta_text, cta_url, cta_type, is_public, subdomain, created_at, updated_at, tenant_id
 `
 
 type CreateSpaceParams struct {
@@ -40,6 +51,7 @@ type CreateSpaceParams struct {
 	CtaUrl        pgtype.Text        `json:"cta_url"`
 	CtaType       CtaType            `json:"cta_type"`
 	IsPublic      bool               `json:"is_public"`
+	TenantID      pgtype.UUID        `json:"tenant_id"`
 }
 
 func (q *Queries) CreateSpace(ctx context.Context, arg CreateSpaceParams) (Space, error) {
@@ -55,6 +67,7 @@ func (q *Queries) CreateSpace(ctx context.Context, arg CreateSpaceParams) (Space
 		arg.CtaUrl,
 		arg.CtaType,
 		arg.IsPublic,
+		arg.TenantID,
 	)
 	var i Space
 	err := row.Scan(
@@ -73,6 +86,7 @@ func (q *Queries) CreateSpace(ctx context.Context, arg CreateSpaceParams) (Space
 		&i.Subdomain,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
@@ -87,7 +101,7 @@ func (q *Queries) DeleteSpace(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getPublicSpaceBySlug = `-- name: GetPublicSpaceBySlug :one
-SELECT id, user_id, slug, name, description, category, cover_image_url, services, cta_text, cta_url, cta_type, is_public, subdomain, created_at, updated_at FROM spaces WHERE slug = $1 AND is_public = true
+SELECT id, user_id, slug, name, description, category, cover_image_url, services, cta_text, cta_url, cta_type, is_public, subdomain, created_at, updated_at, tenant_id FROM spaces WHERE slug = $1 AND is_public = true
 `
 
 func (q *Queries) GetPublicSpaceBySlug(ctx context.Context, slug string) (Space, error) {
@@ -109,12 +123,13 @@ func (q *Queries) GetPublicSpaceBySlug(ctx context.Context, slug string) (Space,
 		&i.Subdomain,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
 
 const getSpaceByID = `-- name: GetSpaceByID :one
-SELECT id, user_id, slug, name, description, category, cover_image_url, services, cta_text, cta_url, cta_type, is_public, subdomain, created_at, updated_at FROM spaces WHERE id = $1
+SELECT id, user_id, slug, name, description, category, cover_image_url, services, cta_text, cta_url, cta_type, is_public, subdomain, created_at, updated_at, tenant_id FROM spaces WHERE id = $1
 `
 
 func (q *Queries) GetSpaceByID(ctx context.Context, id pgtype.UUID) (Space, error) {
@@ -136,12 +151,13 @@ func (q *Queries) GetSpaceByID(ctx context.Context, id pgtype.UUID) (Space, erro
 		&i.Subdomain,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
 
 const getSpaceBySlug = `-- name: GetSpaceBySlug :one
-SELECT id, user_id, slug, name, description, category, cover_image_url, services, cta_text, cta_url, cta_type, is_public, subdomain, created_at, updated_at FROM spaces WHERE slug = $1
+SELECT id, user_id, slug, name, description, category, cover_image_url, services, cta_text, cta_url, cta_type, is_public, subdomain, created_at, updated_at, tenant_id FROM spaces WHERE slug = $1
 `
 
 func (q *Queries) GetSpaceBySlug(ctx context.Context, slug string) (Space, error) {
@@ -163,12 +179,55 @@ func (q *Queries) GetSpaceBySlug(ctx context.Context, slug string) (Space, error
 		&i.Subdomain,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
 
+const listSpacesByTenantID = `-- name: ListSpacesByTenantID :many
+SELECT id, user_id, slug, name, description, category, cover_image_url, services, cta_text, cta_url, cta_type, is_public, subdomain, created_at, updated_at, tenant_id FROM spaces WHERE tenant_id = $1 ORDER BY created_at DESC
+`
+
+// Tenant-scoped queries
+func (q *Queries) ListSpacesByTenantID(ctx context.Context, tenantID pgtype.UUID) ([]Space, error) {
+	rows, err := q.db.Query(ctx, listSpacesByTenantID, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Space{}
+	for rows.Next() {
+		var i Space
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Slug,
+			&i.Name,
+			&i.Description,
+			&i.Category,
+			&i.CoverImageUrl,
+			&i.Services,
+			&i.CtaText,
+			&i.CtaUrl,
+			&i.CtaType,
+			&i.IsPublic,
+			&i.Subdomain,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.TenantID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSpacesByUserID = `-- name: ListSpacesByUserID :many
-SELECT id, user_id, slug, name, description, category, cover_image_url, services, cta_text, cta_url, cta_type, is_public, subdomain, created_at, updated_at FROM spaces WHERE user_id = $1 ORDER BY created_at DESC
+SELECT id, user_id, slug, name, description, category, cover_image_url, services, cta_text, cta_url, cta_type, is_public, subdomain, created_at, updated_at, tenant_id FROM spaces WHERE user_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListSpacesByUserID(ctx context.Context, userID string) ([]Space, error) {
@@ -196,6 +255,7 @@ func (q *Queries) ListSpacesByUserID(ctx context.Context, userID string) ([]Spac
 			&i.Subdomain,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TenantID,
 		); err != nil {
 			return nil, err
 		}
@@ -208,7 +268,7 @@ func (q *Queries) ListSpacesByUserID(ctx context.Context, userID string) ([]Spac
 }
 
 const listSpacesByUserIDs = `-- name: ListSpacesByUserIDs :many
-SELECT id, user_id, slug, name, description, category, cover_image_url, services, cta_text, cta_url, cta_type, is_public, subdomain, created_at, updated_at FROM spaces WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC
+SELECT id, user_id, slug, name, description, category, cover_image_url, services, cta_text, cta_url, cta_type, is_public, subdomain, created_at, updated_at, tenant_id FROM spaces WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC
 `
 
 func (q *Queries) ListSpacesByUserIDs(ctx context.Context, dollar_1 []string) ([]Space, error) {
@@ -236,6 +296,7 @@ func (q *Queries) ListSpacesByUserIDs(ctx context.Context, dollar_1 []string) ([
 			&i.Subdomain,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TenantID,
 		); err != nil {
 			return nil, err
 		}
@@ -251,7 +312,7 @@ const updateSpace = `-- name: UpdateSpace :one
 UPDATE spaces SET
     name = $2, description = $3, category = $4, cover_image_url = $5,
     services = $6, cta_text = $7, cta_url = $8, cta_type = $9, is_public = $10
-WHERE id = $1 RETURNING id, user_id, slug, name, description, category, cover_image_url, services, cta_text, cta_url, cta_type, is_public, subdomain, created_at, updated_at
+WHERE id = $1 RETURNING id, user_id, slug, name, description, category, cover_image_url, services, cta_text, cta_url, cta_type, is_public, subdomain, created_at, updated_at, tenant_id
 `
 
 type UpdateSpaceParams struct {
@@ -297,6 +358,7 @@ func (q *Queries) UpdateSpace(ctx context.Context, arg UpdateSpaceParams) (Space
 		&i.Subdomain,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }

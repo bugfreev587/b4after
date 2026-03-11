@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useApiClient } from "@/lib/api";
+import { useTenant } from "@/lib/tenant-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,11 +16,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-
-interface User {
-  id: string;
-  plan: string;
-}
 
 interface Invoice {
   id: string;
@@ -110,16 +106,12 @@ function BillingContent() {
   const api = useApiClient();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const { plan: currentPlan, isOwner, refetch: refetchTenant } = useTenant();
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [isAnnual, setIsAnnual] = useState(false);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
-
-  const fetchUser = useCallback(() => {
-    return api.fetch<User>("/users/me").then(setUser);
-  }, [api]);
 
   const fetchInvoices = useCallback(() => {
     setInvoicesLoading(true);
@@ -131,9 +123,9 @@ function BillingContent() {
   }, [api]);
 
   useEffect(() => {
-    fetchUser().finally(() => setLoading(false));
+    setLoading(false);
     fetchInvoices();
-  }, [fetchUser, fetchInvoices]);
+  }, [fetchInvoices]);
 
   // Verify checkout session on redirect from Stripe
   useEffect(() => {
@@ -147,7 +139,7 @@ function BillingContent() {
       })
       .then((res) => {
         toast.success(`Upgraded to ${res.plan.charAt(0).toUpperCase() + res.plan.slice(1)}!`);
-        fetchUser();
+        refetchTenant();
         fetchInvoices();
       })
       .catch(() => {
@@ -156,7 +148,7 @@ function BillingContent() {
       .finally(() => {
         router.replace("/dashboard/billing");
       });
-  }, [searchParams, api, router, fetchUser, fetchInvoices]);
+  }, [searchParams, api, router, refetchTenant, fetchInvoices]);
 
   const handleCheckout = async (plan: string) => {
     setCheckoutLoading(plan);
@@ -190,7 +182,16 @@ function BillingContent() {
     return <p className="text-muted-foreground">Loading...</p>;
   }
 
-  const currentPlan = user?.plan || "free";
+  if (!isOwner) {
+    return (
+      <div className="text-center py-12">
+        <h1 className="text-2xl font-bold mb-4">Billing</h1>
+        <p className="text-muted-foreground">
+          Contact your workspace owner to manage billing.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div>

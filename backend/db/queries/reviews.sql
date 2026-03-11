@@ -1,6 +1,6 @@
 -- name: CreateReview :one
-INSERT INTO reviews (comparison_id, space_id, user_id, reviewer_name, reviewer_photo_url, reviewer_contact, rating, content)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO reviews (comparison_id, space_id, user_id, reviewer_name, reviewer_photo_url, reviewer_contact, rating, content, tenant_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING *;
 
 -- name: GetReviewByID :one
@@ -28,3 +28,15 @@ DELETE FROM reviews WHERE id = $1;
 SELECT COUNT(*) AS total, COALESCE(AVG(rating), 0)::float AS avg_rating,
        COUNT(*) FILTER (WHERE status = 'published') AS published_count
 FROM reviews WHERE user_id = $1;
+
+-- Tenant-scoped queries
+-- name: ListReviewsByTenantID :many
+SELECT * FROM reviews WHERE tenant_id = $1 ORDER BY created_at DESC;
+
+-- name: CountReviewsByTenantID :one
+SELECT COUNT(*) FROM reviews WHERE tenant_id = $1;
+
+-- name: GetReviewStatsByTenantID :one
+SELECT COUNT(*) AS total, COALESCE(AVG(rating), 0)::float AS avg_rating,
+       COUNT(*) FILTER (WHERE status = 'published') AS published_count
+FROM reviews WHERE tenant_id = $1;

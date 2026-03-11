@@ -41,6 +41,9 @@ func (h *BillingHandler) CreateCheckoutSession(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	tenantID := middleware.GetTenantID(r.Context())
+	tenantIDStr := middleware.GetTenantIDString(r.Context())
+
 	var req checkoutRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		Error(w, http.StatusBadRequest, "invalid request body")
@@ -75,9 +78,10 @@ func (h *BillingHandler) CreateCheckoutSession(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	user, err := h.queries.GetUserByID(r.Context(), userID)
+	// Get tenant for stripe customer ID
+	tenant, err := h.queries.GetTenantByID(r.Context(), tenantID)
 	if err != nil {
-		Error(w, http.StatusInternalServerError, "failed to get user")
+		Error(w, http.StatusInternalServerError, "failed to get tenant")
 		return
 	}
 
@@ -94,20 +98,25 @@ func (h *BillingHandler) CreateCheckoutSession(w http.ResponseWriter, r *http.Re
 		SubscriptionData: &stripe.CheckoutSessionSubscriptionDataParams{
 			TrialPeriodDays: stripe.Int64(14),
 			Metadata: map[string]string{
-				"user_id": userID,
-				"plan":    req.Plan,
+				"user_id":   userID,
+				"tenant_id": tenantIDStr,
+				"plan":      req.Plan,
 			},
 		},
 		Metadata: map[string]string{
-			"user_id": userID,
-			"plan":    req.Plan,
+			"user_id":   userID,
+			"tenant_id": tenantIDStr,
+			"plan":      req.Plan,
 		},
 	}
 
-	if user.StripeCustomerID.Valid {
-		params.Customer = stripe.String(user.StripeCustomerID.String)
-	} else if user.Email != "" {
-		params.CustomerEmail = stripe.String(user.Email)
+	if tenant.StripeCustomerID.Valid {
+		params.Customer = stripe.String(tenant.StripeCustomerID.String)
+	} else {
+		user, err := h.queries.GetUserByID(r.Context(), userID)
+		if err == nil && user.Email != "" {
+			params.CustomerEmail = stripe.String(user.Email)
+		}
 	}
 
 	session, err := checkoutsession.New(params)
@@ -120,25 +129,21 @@ func (h *BillingHandler) CreateCheckoutSession(w http.ResponseWriter, r *http.Re
 }
 
 func (h *BillingHandler) CreatePortalSession(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
-	user, err := h.queries.GetUserByID(r.Context(), userID)
+	tenant, err := h.queries.GetTenantByID(r.Context(), tenantID)
 	if err != nil {
-		Error(w, http.StatusInternalServerError, "failed to get user")
+		Error(w, http.StatusInternalServerError, "failed to get tenant")
 		return
 	}
 
-	if !user.StripeCustomerID.Valid {
+	if !tenant.StripeCustomerID.Valid {
 		Error(w, http.StatusBadRequest, "no stripe customer found")
 		return
 	}
 
 	params := &stripe.BillingPortalSessionParams{
-		Customer:  stripe.String(user.StripeCustomerID.String),
+		Customer:  stripe.String(tenant.StripeCustomerID.String),
 		ReturnURL: stripe.String(h.cfg.FrontendURL + "/dashboard/billing"),
 	}
 
@@ -171,16 +176,21 @@ func (h *BillingHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 			log.Printf("webhook: failed to unmarshal checkout session: %v", err)
 			break
 		}
-		userID := session.Metadata["user_id"]
+		tenantIDStr := session.Metadata["tenant_id"]
 		plan := session.Metadata["plan"]
-		if userID != "" && plan != "" {
-			err := h.queries.UpdateUserPlan(r.Context(), db.UpdateUserPlanParams{
-				ID:               userID,
+		if tenantIDStr != "" && plan != "" {
+			tenantUUID, err := parseUUID(tenantIDStr)
+			if err != nil {
+				log.Printf("webhook: invalid tenant_id in metadata: %v", err)
+				break
+			}
+			err = h.queries.UpdateTenantPlan(r.Context(), db.UpdateTenantPlanParams{
+				ID:               tenantUUID,
 				Plan:             db.UserPlan(plan),
 				StripeCustomerID: pgtype.Text{String: session.Customer.ID, Valid: session.Customer.ID != ""},
 			})
 			if err != nil {
-				log.Printf("webhook: failed to update user plan: %v", err)
+				log.Printf("webhook: failed to update tenant plan: %v", err)
 			}
 		}
 
@@ -201,17 +211,20 @@ func (h *BillingHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 		}
 		if sub.Customer != nil {
 			customerID := sub.Customer.ID
-			// Find user by stripe customer ID and downgrade to free
-			// Since we don't have a query by stripe_customer_id, we use metadata
 			if sub.Metadata != nil {
-				if userID, ok := sub.Metadata["user_id"]; ok {
-					err := h.queries.UpdateUserPlan(r.Context(), db.UpdateUserPlanParams{
-						ID:               userID,
+				if tenantIDStr, ok := sub.Metadata["tenant_id"]; ok {
+					tenantUUID, err := parseUUID(tenantIDStr)
+					if err != nil {
+						log.Printf("webhook: invalid tenant_id in metadata: %v", err)
+						break
+					}
+					err = h.queries.UpdateTenantPlan(r.Context(), db.UpdateTenantPlanParams{
+						ID:               tenantUUID,
 						Plan:             db.UserPlanFree,
 						StripeCustomerID: pgtype.Text{String: customerID, Valid: true},
 					})
 					if err != nil {
-						log.Printf("webhook: failed to downgrade user plan: %v", err)
+						log.Printf("webhook: failed to downgrade tenant plan: %v", err)
 					}
 				}
 			}
@@ -226,11 +239,7 @@ type verifyCheckoutRequest struct {
 }
 
 func (h *BillingHandler) VerifyCheckoutSession(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
 	var req verifyCheckoutRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.SessionID == "" {
@@ -249,10 +258,11 @@ func (h *BillingHandler) VerifyCheckoutSession(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	metaUserID := session.Metadata["user_id"]
+	metaTenantID := session.Metadata["tenant_id"]
 	plan := session.Metadata["plan"]
-	if metaUserID != userID {
-		Error(w, http.StatusForbidden, "session does not belong to user")
+	tenantIDStr := middleware.GetTenantIDString(r.Context())
+	if metaTenantID != tenantIDStr {
+		Error(w, http.StatusForbidden, "session does not belong to this workspace")
 		return
 	}
 
@@ -266,8 +276,8 @@ func (h *BillingHandler) VerifyCheckoutSession(w http.ResponseWriter, r *http.Re
 		customerID = session.Customer.ID
 	}
 
-	err = h.queries.UpdateUserPlan(r.Context(), db.UpdateUserPlanParams{
-		ID:               userID,
+	err = h.queries.UpdateTenantPlan(r.Context(), db.UpdateTenantPlanParams{
+		ID:               tenantID,
 		Plan:             db.UserPlan(plan),
 		StripeCustomerID: pgtype.Text{String: customerID, Valid: customerID != ""},
 	})
@@ -290,25 +300,21 @@ type invoiceResponse struct {
 }
 
 func (h *BillingHandler) ListInvoices(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
-	user, err := h.queries.GetUserByID(r.Context(), userID)
+	tenant, err := h.queries.GetTenantByID(r.Context(), tenantID)
 	if err != nil {
-		Error(w, http.StatusInternalServerError, "failed to get user")
+		Error(w, http.StatusInternalServerError, "failed to get tenant")
 		return
 	}
 
-	if !user.StripeCustomerID.Valid {
+	if !tenant.StripeCustomerID.Valid {
 		JSON(w, http.StatusOK, []invoiceResponse{})
 		return
 	}
 
 	params := &stripe.InvoiceListParams{
-		Customer: stripe.String(user.StripeCustomerID.String),
+		Customer: stripe.String(tenant.StripeCustomerID.String),
 	}
 	params.Filters.AddFilter("limit", "", "24")
 

@@ -77,12 +77,8 @@ func (h *MaterialHandler) Generate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Plan checks
-	user, err := h.queries.GetUserByID(r.Context(), userID)
-	if err != nil {
-		Error(w, http.StatusInternalServerError, "failed to get user")
-		return
-	}
-	if user.Plan == db.UserPlanFree && req.Template != "business_card" {
+	plan := middleware.GetTenantPlan(r.Context())
+	if plan == db.UserPlanFree && req.Template != "business_card" {
 		Error(w, http.StatusForbidden, "upgrade to unlock all templates")
 		return
 	}
@@ -122,7 +118,7 @@ func (h *MaterialHandler) Generate(w http.ResponseWriter, r *http.Request) {
 	dc.DrawImage(qrImg, qrX, qrY)
 
 	// Watermark for free plan
-	if user.Plan == db.UserPlanFree {
+	if plan == db.UserPlanFree {
 		dc.SetColor(color.RGBA{255, 255, 255, 128})
 		wmFontSize := float64(spec.Width) / 30
 		if err := dc.LoadFontFace("/System/Library/Fonts/Helvetica.ttc", wmFontSize); err == nil {

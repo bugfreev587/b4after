@@ -40,6 +40,8 @@ func (h *SpaceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantID := middleware.GetTenantID(r.Context())
+
 	var req createSpaceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		Error(w, http.StatusBadRequest, "invalid request body")
@@ -51,18 +53,14 @@ func (h *SpaceHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Enforce plan limits: free=1, pro=1, business=5
-	user, err := h.queries.GetUserByID(r.Context(), userID)
-	if err != nil {
-		Error(w, http.StatusInternalServerError, "failed to get user")
-		return
-	}
-	count, err := h.queries.CountSpacesByUserID(r.Context(), userID)
+	plan := middleware.GetTenantPlan(r.Context())
+	count, err := h.queries.CountSpacesByTenantID(r.Context(), tenantID)
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to count spaces")
 		return
 	}
 	var maxSpaces int64 = 1
-	if user.Plan == db.UserPlanBusiness {
+	if plan == db.UserPlanBusiness {
 		maxSpaces = 5
 	}
 	if count >= maxSpaces {
@@ -96,6 +94,7 @@ func (h *SpaceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		CtaUrl:        pgtype.Text{String: req.CtaURL, Valid: req.CtaURL != ""},
 		CtaType:       db.CtaType(req.CtaType),
 		IsPublic:      isPublic,
+		TenantID:      tenantID,
 	})
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to create space")
@@ -106,19 +105,9 @@ func (h *SpaceHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *SpaceHandler) List(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
-	userIDs, err := middleware.GetAccessibleUserIDs(r.Context(), h.queries, userID)
-	if err != nil {
-		Error(w, http.StatusInternalServerError, "failed to get accessible users")
-		return
-	}
-
-	spaces, err := h.queries.ListSpacesByUserIDs(r.Context(), userIDs)
+	spaces, err := h.queries.ListSpacesByTenantID(r.Context(), tenantID)
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to list spaces")
 		return
@@ -161,11 +150,7 @@ type updateSpaceRequest struct {
 }
 
 func (h *SpaceHandler) Update(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
 	id := chi.URLParam(r, "id")
 	uid, err := uuid.Parse(id)
@@ -179,7 +164,7 @@ func (h *SpaceHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusNotFound, "space not found")
 		return
 	}
-	if !middleware.CanAccessResource(r.Context(), h.queries, userID, space.UserID) {
+	if space.TenantID != tenantID {
 		Error(w, http.StatusForbidden, "not your space")
 		return
 	}
@@ -217,11 +202,7 @@ func (h *SpaceHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *SpaceHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
 	id := chi.URLParam(r, "id")
 	uid, err := uuid.Parse(id)
@@ -235,7 +216,7 @@ func (h *SpaceHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusNotFound, "space not found")
 		return
 	}
-	if !middleware.CanAccessResource(r.Context(), h.queries, userID, space.UserID) {
+	if space.TenantID != tenantID {
 		Error(w, http.StatusForbidden, "not your space")
 		return
 	}

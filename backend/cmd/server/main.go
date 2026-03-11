@@ -116,15 +116,22 @@ func main() {
 		r.Post("/api/webhooks/stripe", billingHandler.HandleWebhook)
 	}
 
+	// Public invite endpoint
+	tenantHandler := handler.NewTenantHandler(queries, emailClient, cfg.FrontendURL)
+	r.Get("/api/invites/{token}", tenantHandler.GetInviteByToken)
+
 	// Protected routes (combined auth: API key or Clerk JWT)
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.CombinedAuthMiddleware(queries))
 
-		// User
+		// User (before TenantMiddleware — auto-creates tenant)
 		userHandler := handler.NewUserHandler(queries)
 		r.Get("/api/users/me", userHandler.Me)
 
-		// Upload
+		// Accept invite (needs auth but not tenant)
+		r.Post("/api/invites/{token}/accept", tenantHandler.AcceptInvite)
+
+		// Upload (no tenant needed)
 		if r2 != nil {
 			uploadHandler := handler.NewUploadHandler(r2)
 			r.Post("/api/upload", uploadHandler.Upload)
@@ -133,151 +140,165 @@ func main() {
 			r.Post("/api/upload", uploadHandler.UploadLocal)
 		}
 
-		// Spaces
-		r.Get("/api/spaces", spaceHandler.List)
-		r.Post("/api/spaces", spaceHandler.Create)
-		r.Get("/api/spaces/{id}", spaceHandler.Get)
-		r.Put("/api/spaces/{id}", spaceHandler.Update)
-		r.Delete("/api/spaces/{id}", spaceHandler.Delete)
-
-		// Comparisons
-		r.Get("/api/comparisons", compHandler.List)
-		r.Post("/api/comparisons", compHandler.Create)
-		r.Get("/api/comparisons/{id}", compHandler.Get)
-		r.Put("/api/comparisons/{id}", compHandler.Update)
-		r.Delete("/api/comparisons/{id}", compHandler.Delete)
-
-		// Output generation
-		outputHandler := handler.NewOutputHandler(queries, r2)
-		r.Post("/api/comparisons/{id}/image", outputHandler.GenerateImage)
-
-		// Video generation (pro/business only)
+		// All routes below require tenant context
 		r.Group(func(r chi.Router) {
-			r.Use(middleware.RequirePlan(queries, db.UserPlanPro, db.UserPlanBusiness))
-			r.Post("/api/comparisons/{id}/video", outputHandler.GenerateVideo)
-			r.Post("/api/comparisons/{id}/transform-video", outputHandler.GenerateTransformVideo)
-			r.Post("/api/comparisons/{id}/process-video", outputHandler.GenerateProcessVideo)
-			r.Post("/api/comparisons/{id}/multi-process-video", outputHandler.GenerateMultiPhotoProcessVideo)
+			r.Use(middleware.TenantMiddleware(queries))
+
+			// Tenant
+			r.Get("/api/tenant", tenantHandler.GetTenant)
+			r.Get("/api/tenant/members", tenantHandler.ListMembers)
+			// Owner-only tenant management
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.RequireOwner())
+				r.Put("/api/tenant", tenantHandler.UpdateTenant)
+				r.Group(func(r chi.Router) {
+					r.Use(middleware.RequirePlan(db.UserPlanBusiness))
+					r.Post("/api/tenant/invites", tenantHandler.InviteMember)
+					r.Get("/api/tenant/invites", tenantHandler.ListInvites)
+					r.Delete("/api/tenant/invites/{id}", tenantHandler.CancelInvite)
+					r.Post("/api/tenant/invites/{id}/resend", tenantHandler.ResendInvite)
+					r.Delete("/api/tenant/members/{id}", tenantHandler.RemoveMember)
+				})
+			})
+
+			// Spaces
+			r.Get("/api/spaces", spaceHandler.List)
+			r.Post("/api/spaces", spaceHandler.Create)
+			r.Get("/api/spaces/{id}", spaceHandler.Get)
+			r.Put("/api/spaces/{id}", spaceHandler.Update)
+			r.Delete("/api/spaces/{id}", spaceHandler.Delete)
+
+			// Comparisons
+			r.Get("/api/comparisons", compHandler.List)
+			r.Post("/api/comparisons", compHandler.Create)
+			r.Get("/api/comparisons/{id}", compHandler.Get)
+			r.Put("/api/comparisons/{id}", compHandler.Update)
+			r.Delete("/api/comparisons/{id}", compHandler.Delete)
+
+			// Output generation
+			outputHandler := handler.NewOutputHandler(queries, r2)
+			r.Post("/api/comparisons/{id}/image", outputHandler.GenerateImage)
+
+			// Video generation (pro/business only)
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.RequirePlan(db.UserPlanPro, db.UserPlanBusiness))
+				r.Post("/api/comparisons/{id}/video", outputHandler.GenerateVideo)
+				r.Post("/api/comparisons/{id}/transform-video", outputHandler.GenerateTransformVideo)
+				r.Post("/api/comparisons/{id}/process-video", outputHandler.GenerateProcessVideo)
+				r.Post("/api/comparisons/{id}/multi-process-video", outputHandler.GenerateMultiPhotoProcessVideo)
+			})
+
+			// Analytics
+			r.Get("/api/analytics/{comparisonId}", analyticsHandler.GetSummary)
+
+			// Advanced analytics (pro/business)
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.RequirePlan(db.UserPlanPro, db.UserPlanBusiness))
+				r.Get("/api/analytics/{comparisonId}/advanced", analyticsHandler.GetAdvancedAnalytics)
+			})
+			// CSV export (business only)
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.RequirePlan(db.UserPlanBusiness))
+				r.Get("/api/analytics/{comparisonId}/export", analyticsHandler.ExportCSV)
+			})
+
+			// Brands (pro/business only)
+			brandHandler := handler.NewBrandHandler(queries)
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.RequirePlan(db.UserPlanPro, db.UserPlanBusiness))
+				r.Post("/api/brands", brandHandler.Create)
+				r.Put("/api/brands/{id}", brandHandler.Update)
+			})
+			r.Get("/api/brands", brandHandler.List)
+
+			// Galleries
+			r.Get("/api/galleries", galleryHandler.List)
+			r.Post("/api/galleries", galleryHandler.Create)
+			r.Get("/api/galleries/{id}", galleryHandler.Get)
+			r.Put("/api/galleries/{id}", galleryHandler.Update)
+			r.Delete("/api/galleries/{id}", galleryHandler.Delete)
+			r.Post("/api/galleries/{id}/comparisons", galleryHandler.AddComparison)
+			r.Delete("/api/galleries/{id}/comparisons/{compId}", galleryHandler.RemoveComparison)
+
+			// Upload Requests (protected routes)
+			r.Post("/api/spaces/{id}/requests", uploadReqHandler.CreateRequest)
+			r.Get("/api/spaces/{id}/requests", uploadReqHandler.ListRequests)
+			r.Post("/api/requests/{id}/remind", uploadReqHandler.SendReminder)
+			r.Post("/api/requests/{id}/approve", uploadReqHandler.Approve)
+			r.Post("/api/requests/{id}/reject", uploadReqHandler.Reject)
+
+			// Reviews (protected)
+			r.Get("/api/reviews", reviewHandler.List)
+			r.Get("/api/reviews/stats", reviewHandler.GetStats)
+			r.Post("/api/reviews/{id}/publish", reviewHandler.Publish)
+			r.Post("/api/reviews/{id}/hide", reviewHandler.Hide)
+			r.Delete("/api/reviews/{id}", reviewHandler.Delete)
+			// Reply requires Pro+
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.RequirePlan(db.UserPlanPro, db.UserPlanBusiness))
+				r.Post("/api/reviews/{id}/reply", reviewHandler.Reply)
+			})
+
+			// Timelines
+			r.Get("/api/timelines", timelineHandler.List)
+			r.Post("/api/timelines", timelineHandler.Create)
+			r.Get("/api/timelines/{id}", timelineHandler.Get)
+			r.Put("/api/timelines/{id}", timelineHandler.Update)
+			r.Delete("/api/timelines/{id}", timelineHandler.Delete)
+			r.Post("/api/timelines/{id}/entries", timelineHandler.CreateEntry)
+			r.Put("/api/timelines/{id}/entries/{entryId}", timelineHandler.UpdateEntry)
+			r.Delete("/api/timelines/{id}/entries/{entryId}", timelineHandler.DeleteEntry)
+			r.Post("/api/timelines/{id}/entries/reorder", timelineHandler.ReorderEntries)
+
+			// Materials (QR)
+			materialHandler := handler.NewMaterialHandler(queries, r2)
+			r.Post("/api/materials/generate", materialHandler.Generate)
+
+			// Leads (protected)
+			r.Get("/api/leads", leadHandler.List)
+			r.Get("/api/leads/stats", leadHandler.GetStats)
+			r.Put("/api/leads/{id}/status", leadHandler.UpdateStatus)
+			r.Get("/api/leads/form-config", leadHandler.GetFormConfig)
+			r.Put("/api/leads/form-config", leadHandler.UpdateFormConfig)
+
+			// Benchmarks
+			benchmarkHandler := handler.NewBenchmarkHandler(queries)
+			r.Get("/api/benchmarks/me", benchmarkHandler.GetUserBenchmark)
+			r.Get("/api/benchmarks/{category}", benchmarkHandler.GetIndustryBenchmark)
+			// Achievements (Pro+)
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.RequirePlan(db.UserPlanPro, db.UserPlanBusiness))
+				r.Get("/api/achievements", benchmarkHandler.GetAchievements)
+			})
+
+			// Content Calendar
+			calendarHandler := handler.NewContentCalendarHandler(queries)
+			r.Get("/api/content-calendar", calendarHandler.List)
+			r.Post("/api/content-calendar/generate", calendarHandler.Generate)
+			r.Put("/api/content-calendar/{id}/status", calendarHandler.UpdateStatus)
+			r.Get("/api/content-calendar/settings", calendarHandler.GetSettings)
+			r.Put("/api/content-calendar/settings", calendarHandler.UpdateSettings)
+
+			// Subdomain settings (business only)
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.RequirePlan(db.UserPlanBusiness))
+				r.Get("/api/settings/subdomain", subdomainHandler.Get)
+				r.Post("/api/settings/subdomain", subdomainHandler.Update)
+				r.Post("/api/settings/api-key", handler.GenerateAPIKey(queries))
+			})
+
+			// Billing (owner only)
+			if cfg.StripeSecretKey != "" {
+				r.Group(func(r chi.Router) {
+					r.Use(middleware.RequireOwner())
+					billingHandler := handler.NewBillingHandler(queries, cfg)
+					r.Post("/api/billing/checkout", billingHandler.CreateCheckoutSession)
+					r.Post("/api/billing/portal", billingHandler.CreatePortalSession)
+					r.Post("/api/billing/checkout/verify", billingHandler.VerifyCheckoutSession)
+					r.Get("/api/billing/invoices", billingHandler.ListInvoices)
+				})
+			}
 		})
-
-		// Analytics
-		r.Get("/api/analytics/{comparisonId}", analyticsHandler.GetSummary)
-
-		// Advanced analytics (pro/business)
-		r.Group(func(r chi.Router) {
-			r.Use(middleware.RequirePlan(queries, db.UserPlanPro, db.UserPlanBusiness))
-			r.Get("/api/analytics/{comparisonId}/advanced", analyticsHandler.GetAdvancedAnalytics)
-		})
-		// CSV export (business only)
-		r.Group(func(r chi.Router) {
-			r.Use(middleware.RequirePlan(queries, db.UserPlanBusiness))
-			r.Get("/api/analytics/{comparisonId}/export", analyticsHandler.ExportCSV)
-		})
-
-		// Brands (pro/business only)
-		brandHandler := handler.NewBrandHandler(queries)
-		r.Group(func(r chi.Router) {
-			r.Use(middleware.RequirePlan(queries, db.UserPlanPro, db.UserPlanBusiness))
-			r.Post("/api/brands", brandHandler.Create)
-			r.Put("/api/brands/{id}", brandHandler.Update)
-		})
-		r.Get("/api/brands", brandHandler.List)
-
-		// Galleries
-		r.Get("/api/galleries", galleryHandler.List)
-		r.Post("/api/galleries", galleryHandler.Create)
-		r.Get("/api/galleries/{id}", galleryHandler.Get)
-		r.Put("/api/galleries/{id}", galleryHandler.Update)
-		r.Delete("/api/galleries/{id}", galleryHandler.Delete)
-		r.Post("/api/galleries/{id}/comparisons", galleryHandler.AddComparison)
-		r.Delete("/api/galleries/{id}/comparisons/{compId}", galleryHandler.RemoveComparison)
-
-		// Upload Requests (protected routes)
-		r.Post("/api/spaces/{id}/requests", uploadReqHandler.CreateRequest)
-		r.Get("/api/spaces/{id}/requests", uploadReqHandler.ListRequests)
-		r.Post("/api/requests/{id}/remind", uploadReqHandler.SendReminder)
-		r.Post("/api/requests/{id}/approve", uploadReqHandler.Approve)
-		r.Post("/api/requests/{id}/reject", uploadReqHandler.Reject)
-
-		// Reviews (protected)
-		r.Get("/api/reviews", reviewHandler.List)
-		r.Get("/api/reviews/stats", reviewHandler.GetStats)
-		r.Post("/api/reviews/{id}/publish", reviewHandler.Publish)
-		r.Post("/api/reviews/{id}/hide", reviewHandler.Hide)
-		r.Delete("/api/reviews/{id}", reviewHandler.Delete)
-		// Reply requires Pro+
-		r.Group(func(r chi.Router) {
-			r.Use(middleware.RequirePlan(queries, db.UserPlanPro, db.UserPlanBusiness))
-			r.Post("/api/reviews/{id}/reply", reviewHandler.Reply)
-		})
-
-		// Timelines
-		r.Get("/api/timelines", timelineHandler.List)
-		r.Post("/api/timelines", timelineHandler.Create)
-		r.Get("/api/timelines/{id}", timelineHandler.Get)
-		r.Put("/api/timelines/{id}", timelineHandler.Update)
-		r.Delete("/api/timelines/{id}", timelineHandler.Delete)
-		r.Post("/api/timelines/{id}/entries", timelineHandler.CreateEntry)
-		r.Put("/api/timelines/{id}/entries/{entryId}", timelineHandler.UpdateEntry)
-		r.Delete("/api/timelines/{id}/entries/{entryId}", timelineHandler.DeleteEntry)
-		r.Post("/api/timelines/{id}/entries/reorder", timelineHandler.ReorderEntries)
-
-		// Materials (QR)
-		materialHandler := handler.NewMaterialHandler(queries, r2)
-		r.Post("/api/materials/generate", materialHandler.Generate)
-
-		// Leads (protected)
-		r.Get("/api/leads", leadHandler.List)
-		r.Get("/api/leads/stats", leadHandler.GetStats)
-		r.Put("/api/leads/{id}/status", leadHandler.UpdateStatus)
-		r.Get("/api/leads/form-config", leadHandler.GetFormConfig)
-		r.Put("/api/leads/form-config", leadHandler.UpdateFormConfig)
-
-		// Benchmarks
-		benchmarkHandler := handler.NewBenchmarkHandler(queries)
-		r.Get("/api/benchmarks/me", benchmarkHandler.GetUserBenchmark)
-		r.Get("/api/benchmarks/{category}", benchmarkHandler.GetIndustryBenchmark)
-		// Achievements (Pro+)
-		r.Group(func(r chi.Router) {
-			r.Use(middleware.RequirePlan(queries, db.UserPlanPro, db.UserPlanBusiness))
-			r.Get("/api/achievements", benchmarkHandler.GetAchievements)
-		})
-
-		// Content Calendar
-		calendarHandler := handler.NewContentCalendarHandler(queries)
-		r.Get("/api/content-calendar", calendarHandler.List)
-		r.Post("/api/content-calendar/generate", calendarHandler.Generate)
-		r.Put("/api/content-calendar/{id}/status", calendarHandler.UpdateStatus)
-		r.Get("/api/content-calendar/settings", calendarHandler.GetSettings)
-		r.Put("/api/content-calendar/settings", calendarHandler.UpdateSettings)
-
-		// Teams (business only)
-		teamHandler := handler.NewTeamHandler(queries, emailClient, cfg.FrontendURL)
-		r.Group(func(r chi.Router) {
-			r.Use(middleware.RequirePlan(queries, db.UserPlanBusiness))
-			r.Post("/api/team/members", teamHandler.InviteMember)
-			r.Get("/api/team/members", teamHandler.ListMembers)
-			r.Put("/api/team/members/{id}", teamHandler.UpdateMember)
-			r.Delete("/api/team/members/{id}", teamHandler.RemoveMember)
-			r.Get("/api/team/memberships", teamHandler.ListMemberships)
-		})
-
-		// Subdomain settings (business only)
-		r.Group(func(r chi.Router) {
-			r.Use(middleware.RequirePlan(queries, db.UserPlanBusiness))
-			r.Get("/api/settings/subdomain", subdomainHandler.Get)
-			r.Post("/api/settings/subdomain", subdomainHandler.Update)
-			r.Post("/api/settings/api-key", handler.GenerateAPIKey(queries))
-		})
-
-		// Billing
-		if cfg.StripeSecretKey != "" {
-			billingHandler := handler.NewBillingHandler(queries, cfg)
-			r.Post("/api/billing/checkout", billingHandler.CreateCheckoutSession)
-			r.Post("/api/billing/portal", billingHandler.CreatePortalSession)
-			r.Post("/api/billing/checkout/verify", billingHandler.VerifyCheckoutSession)
-			r.Get("/api/billing/invoices", billingHandler.ListInvoices)
-		}
 	})
 
 	log.Printf("CORS allowed origins: %v", cfg.FrontendURLs)

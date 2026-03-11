@@ -7,20 +7,23 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createAchievement = `-- name: CreateAchievement :exec
-INSERT INTO achievements (user_id, type) VALUES ($1, $2)
+INSERT INTO achievements (user_id, type, tenant_id) VALUES ($1, $2, $3)
 ON CONFLICT (user_id, type) DO NOTHING
 `
 
 type CreateAchievementParams struct {
-	UserID string `json:"user_id"`
-	Type   string `json:"type"`
+	UserID   string      `json:"user_id"`
+	Type     string      `json:"type"`
+	TenantID pgtype.UUID `json:"tenant_id"`
 }
 
 func (q *Queries) CreateAchievement(ctx context.Context, arg CreateAchievementParams) error {
-	_, err := q.db.Exec(ctx, createAchievement, arg.UserID, arg.Type)
+	_, err := q.db.Exec(ctx, createAchievement, arg.UserID, arg.Type, arg.TenantID)
 	return err
 }
 
@@ -56,8 +59,39 @@ func (q *Queries) GetIndustryBenchmarksByCategory(ctx context.Context, category 
 	return items, nil
 }
 
+const listAchievementsByTenantID = `-- name: ListAchievementsByTenantID :many
+SELECT id, user_id, type, achieved_at, tenant_id FROM achievements WHERE tenant_id = $1 ORDER BY achieved_at DESC
+`
+
+// Tenant-scoped queries
+func (q *Queries) ListAchievementsByTenantID(ctx context.Context, tenantID pgtype.UUID) ([]Achievement, error) {
+	rows, err := q.db.Query(ctx, listAchievementsByTenantID, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Achievement{}
+	for rows.Next() {
+		var i Achievement
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Type,
+			&i.AchievedAt,
+			&i.TenantID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAchievementsByUserID = `-- name: ListAchievementsByUserID :many
-SELECT id, user_id, type, achieved_at FROM achievements WHERE user_id = $1 ORDER BY achieved_at DESC
+SELECT id, user_id, type, achieved_at, tenant_id FROM achievements WHERE user_id = $1 ORDER BY achieved_at DESC
 `
 
 func (q *Queries) ListAchievementsByUserID(ctx context.Context, userID string) ([]Achievement, error) {
@@ -74,6 +108,7 @@ func (q *Queries) ListAchievementsByUserID(ctx context.Context, userID string) (
 			&i.UserID,
 			&i.Type,
 			&i.AchievedAt,
+			&i.TenantID,
 		); err != nil {
 			return nil, err
 		}

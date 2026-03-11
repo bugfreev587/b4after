@@ -54,6 +54,9 @@ func (h *UploadRequestHandler) CreateRequest(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	tenantID := middleware.GetTenantID(r.Context())
+	plan := middleware.GetTenantPlan(r.Context())
+
 	spaceID := chi.URLParam(r, "id")
 	spaceUID, err := uuid.Parse(spaceID)
 	if err != nil {
@@ -68,18 +71,13 @@ func (h *UploadRequestHandler) CreateRequest(w http.ResponseWriter, r *http.Requ
 		Error(w, http.StatusNotFound, "space not found")
 		return
 	}
-	if !middleware.CanAccessResource(r.Context(), h.queries, userID, space.UserID) {
+	if space.TenantID != tenantID {
 		Error(w, http.StatusForbidden, "not your space")
 		return
 	}
 
 	// Enforce free plan limit: 3 requests/month
-	user, err := h.queries.GetUserByID(r.Context(), userID)
-	if err != nil {
-		Error(w, http.StatusInternalServerError, "failed to get user")
-		return
-	}
-	if user.Plan == db.UserPlanFree {
+	if plan == db.UserPlanFree {
 		count, err := h.queries.CountUploadRequestsByUserIDThisMonth(r.Context(), userID)
 		if err == nil && count >= 3 {
 			Error(w, http.StatusForbidden, "free plan is limited to 3 upload requests per month — upgrade for unlimited")
@@ -113,6 +111,7 @@ func (h *UploadRequestHandler) CreateRequest(w http.ResponseWriter, r *http.Requ
 		InstructionNote: pgtype.Text{String: req.InstructionNote, Valid: req.InstructionNote != ""},
 		ServiceType:     pgtype.Text{String: req.ServiceType, Valid: req.ServiceType != ""},
 		SentVia:         db.UploadRequestSentVia(req.SentVia),
+		TenantID:        tenantID,
 	})
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to create upload request")
@@ -121,6 +120,7 @@ func (h *UploadRequestHandler) CreateRequest(w http.ResponseWriter, r *http.Requ
 
 	// Send email if client email provided and sent_via is email
 	if req.ClientEmail != "" && req.SentVia == "email" {
+		user, _ := h.queries.GetUserByID(r.Context(), userID)
 		uploadURL := fmt.Sprintf("%s/u/%s", h.frontendURL, token)
 		h.emailClient.SendUploadRequest(req.ClientEmail, req.ClientName, user.Name, uploadURL)
 	}
@@ -130,11 +130,7 @@ func (h *UploadRequestHandler) CreateRequest(w http.ResponseWriter, r *http.Requ
 
 // ListRequests lists upload requests for a space (auth required).
 func (h *UploadRequestHandler) ListRequests(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
 	spaceID := chi.URLParam(r, "id")
 	spaceUID, err := uuid.Parse(spaceID)
@@ -148,7 +144,7 @@ func (h *UploadRequestHandler) ListRequests(w http.ResponseWriter, r *http.Reque
 		Error(w, http.StatusNotFound, "space not found")
 		return
 	}
-	if !middleware.CanAccessResource(r.Context(), h.queries, userID, space.UserID) {
+	if space.TenantID != tenantID {
 		Error(w, http.StatusForbidden, "not your space")
 		return
 	}
@@ -174,6 +170,8 @@ func (h *UploadRequestHandler) SendReminder(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	tenantID := middleware.GetTenantID(r.Context())
+
 	id := chi.URLParam(r, "id")
 	uid, err := uuid.Parse(id)
 	if err != nil {
@@ -186,7 +184,7 @@ func (h *UploadRequestHandler) SendReminder(w http.ResponseWriter, r *http.Reque
 		Error(w, http.StatusNotFound, "request not found")
 		return
 	}
-	if !middleware.CanAccessResource(r.Context(), h.queries, userID, ur.UserID) {
+	if ur.TenantID != tenantID {
 		Error(w, http.StatusForbidden, "not your request")
 		return
 	}
@@ -204,11 +202,7 @@ func (h *UploadRequestHandler) SendReminder(w http.ResponseWriter, r *http.Reque
 
 // Approve approves a submitted upload request and creates a comparison (auth required).
 func (h *UploadRequestHandler) Approve(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
 	id := chi.URLParam(r, "id")
 	uid, err := uuid.Parse(id)
@@ -222,7 +216,7 @@ func (h *UploadRequestHandler) Approve(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusNotFound, "request not found")
 		return
 	}
-	if !middleware.CanAccessResource(r.Context(), h.queries, userID, ur.UserID) {
+	if ur.TenantID != tenantID {
 		Error(w, http.StatusForbidden, "not your request")
 		return
 	}
@@ -271,6 +265,7 @@ func (h *UploadRequestHandler) Approve(w http.ResponseWriter, r *http.Request) {
 		SpaceID:         ur.SpaceID,
 		Source:          db.ComparisonSourceClient,
 		UploadRequestID: requestUUID,
+		TenantID:        tenantID,
 	})
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to create comparison from request")
@@ -290,11 +285,7 @@ func (h *UploadRequestHandler) Approve(w http.ResponseWriter, r *http.Request) {
 
 // Reject rejects a submitted upload request (auth required).
 func (h *UploadRequestHandler) Reject(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
 	id := chi.URLParam(r, "id")
 	uid, err := uuid.Parse(id)
@@ -308,7 +299,7 @@ func (h *UploadRequestHandler) Reject(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusNotFound, "request not found")
 		return
 	}
-	if !middleware.CanAccessResource(r.Context(), h.queries, userID, ur.UserID) {
+	if ur.TenantID != tenantID {
 		Error(w, http.StatusForbidden, "not your request")
 		return
 	}

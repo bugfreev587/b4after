@@ -1,6 +1,6 @@
 -- name: CreateUploadRequest :one
-INSERT INTO upload_requests (space_id, user_id, token, client_name, client_email, client_phone, request_type, instruction_note, service_type, sent_via)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+INSERT INTO upload_requests (space_id, user_id, token, client_name, client_email, client_phone, request_type, instruction_note, service_type, sent_via, tenant_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING *;
 
 -- name: GetUploadRequestByID :one
@@ -31,3 +31,7 @@ UPDATE upload_requests SET reminder_sent_at = now() WHERE id = $1;
 -- name: CountUploadRequestsByUserIDThisMonth :one
 SELECT COUNT(*) FROM upload_requests
 WHERE user_id = $1 AND created_at >= date_trunc('month', now());
+
+-- Tenant-scoped queries
+-- name: ListUploadRequestsByTenantID :many
+SELECT * FROM upload_requests WHERE tenant_id = $1 ORDER BY created_at DESC;

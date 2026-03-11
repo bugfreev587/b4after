@@ -35,6 +35,8 @@ func (h *BrandHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantID := middleware.GetTenantID(r.Context())
+
 	var req createBrandRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		Error(w, http.StatusBadRequest, "invalid request body")
@@ -58,6 +60,7 @@ func (h *BrandHandler) Create(w http.ResponseWriter, r *http.Request) {
 		PrimaryColor:   req.PrimaryColor,
 		SecondaryColor: req.SecondaryColor,
 		WebsiteUrl:     pgtype.Text{String: req.WebsiteURL, Valid: req.WebsiteURL != ""},
+		TenantID:       tenantID,
 	})
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to create brand")
@@ -68,13 +71,9 @@ func (h *BrandHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *BrandHandler) List(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
-	brands, err := h.queries.ListBrandsByUserID(r.Context(), userID)
+	brands, err := h.queries.ListBrandsByTenantID(r.Context(), tenantID)
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to list brands")
 		return
@@ -88,11 +87,7 @@ func (h *BrandHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *BrandHandler) Update(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		Error(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
 
 	id := chi.URLParam(r, "id")
 	uid, err := uuid.Parse(id)
@@ -106,7 +101,7 @@ func (h *BrandHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusNotFound, "brand not found")
 		return
 	}
-	if brand.UserID != userID {
+	if brand.TenantID != tenantID {
 		Error(w, http.StatusForbidden, "not your brand")
 		return
 	}

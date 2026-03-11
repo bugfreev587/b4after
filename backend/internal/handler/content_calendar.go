@@ -29,6 +29,8 @@ func (h *ContentCalendarHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	plan := middleware.GetTenantPlan(r.Context())
+
 	startDate := r.URL.Query().Get("start")
 	endDate := r.URL.Query().Get("end")
 
@@ -54,13 +56,8 @@ func (h *ContentCalendarHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Free plan: max 3/week
-	user, err := h.queries.GetUserByID(r.Context(), userID)
-	if err != nil {
-		Error(w, http.StatusInternalServerError, "failed to get user")
-		return
-	}
 	limit := len(entries)
-	if user.Plan == db.UserPlanFree && limit > 3 {
+	if plan == db.UserPlanFree && limit > 3 {
 		limit = 3
 	}
 
@@ -78,6 +75,9 @@ func (h *ContentCalendarHandler) Generate(w http.ResponseWriter, r *http.Request
 		Error(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
+
+	tenantID := middleware.GetTenantID(r.Context())
+	plan := middleware.GetTenantPlan(r.Context())
 
 	type generateRequest struct {
 		StartDate string `json:"start_date"`
@@ -116,18 +116,12 @@ func (h *ContentCalendarHandler) Generate(w http.ResponseWriter, r *http.Request
 	}
 
 	// Free plan limit
-	user, err := h.queries.GetUserByID(r.Context(), userID)
-	if err != nil {
-		Error(w, http.StatusInternalServerError, "failed to get user")
-		return
-	}
-	if user.Plan == db.UserPlanFree && weeklyFreq > 3 {
+	if plan == db.UserPlanFree && weeklyFreq > 3 {
 		weeklyFreq = 3
 	}
 
-	// Get user's comparisons
-	userIDs, _ := middleware.GetAccessibleUserIDs(r.Context(), h.queries, userID)
-	comparisons, err := h.queries.ListComparisonsByUserIDs(r.Context(), userIDs)
+	// Get tenant's comparisons
+	comparisons, err := h.queries.ListComparisonsByTenantID(r.Context(), tenantID)
 	if err != nil || len(comparisons) == 0 {
 		Error(w, http.StatusBadRequest, "no comparisons available to schedule")
 		return
@@ -171,6 +165,7 @@ func (h *ContentCalendarHandler) Generate(w http.ResponseWriter, r *http.Request
 			ContentType:     db.ContentType(ct),
 			Platform:        db.ContentPlatform(platform),
 			CaptionTemplate: pgtype.Text{String: caption, Valid: true},
+			TenantID:        tenantID,
 		})
 		if err == nil {
 			created = append(created, entry)
@@ -185,12 +180,11 @@ func (h *ContentCalendarHandler) Generate(w http.ResponseWriter, r *http.Request
 }
 
 func (h *ContentCalendarHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	_, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		Error(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
-	_ = userID
 
 	id := chi.URLParam(r, "id")
 	uid, err := uuid.Parse(id)
@@ -261,6 +255,8 @@ func (h *ContentCalendarHandler) UpdateSettings(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	tenantID := middleware.GetTenantID(r.Context())
+
 	var req updateCalendarSettingsRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		Error(w, http.StatusBadRequest, "invalid request body")
@@ -279,6 +275,7 @@ func (h *ContentCalendarHandler) UpdateSettings(w http.ResponseWriter, r *http.R
 		WeeklyFrequency:       int32(req.WeeklyFrequency),
 		PreferredPlatforms:    platformsJSON,
 		PreferredContentTypes: contentTypesJSON,
+		TenantID:              tenantID,
 	})
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to update settings")

@@ -180,6 +180,30 @@ func (c *Client) SendNewLeadNotification(merchantEmail, leadName, leadType, dash
 	}()
 }
 
+// SendTenantInvite sends a workspace invitation email asynchronously via Resend.
+func (c *Client) SendTenantInvite(toEmail, inviterName, tenantName, acceptURL string) {
+	if c.apiKey == "" {
+		log.Printf("email: skipping tenant invite (no Resend API key)")
+		return
+	}
+
+	go func() {
+		body := sendRequest{
+			From:    "BeforeAfter.io <noreply@beforeafter.io>",
+			To:      []string{toEmail},
+			Subject: fmt.Sprintf("%s invited you to %s on BeforeAfter.io", inviterName, tenantName),
+			HTML: fmt.Sprintf(
+				`<h2>You've been invited!</h2>
+<p><strong>%s</strong> has invited you to join <strong>%s</strong> on BeforeAfter.io.</p>
+<p>Click the link below to accept the invitation:</p>
+<p><a href="%s" style="display:inline-block;padding:12px 24px;background:#7c3aed;color:white;text-decoration:none;border-radius:8px;">Accept Invitation</a></p>
+<p style="color:#666;font-size:14px;">This invitation expires in 7 days.</p>`,
+				inviterName, tenantName, acceptURL),
+		}
+		c.send(body, "tenant invite", toEmail)
+	}()
+}
+
 // send is a helper that sends an email via Resend API.
 func (c *Client) send(body sendRequest, emailType, recipient string) {
 	jsonBody, err := json.Marshal(body)

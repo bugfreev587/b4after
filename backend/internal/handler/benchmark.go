@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/xiaoboyu/b4after/backend/internal/db"
 	"github.com/xiaoboyu/b4after/backend/internal/middleware"
@@ -25,23 +26,20 @@ func (h *BenchmarkHandler) GetUserBenchmark(w http.ResponseWriter, r *http.Reque
 		Error(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
+	_ = userID
 
-	user, err := h.queries.GetUserByID(r.Context(), userID)
-	if err != nil {
-		Error(w, http.StatusInternalServerError, "failed to get user")
-		return
-	}
+	tenantID := middleware.GetTenantID(r.Context())
+	plan := middleware.GetTenantPlan(r.Context())
 
-	// Get user's review stats
-	reviewStats, err := h.queries.GetReviewStats(r.Context(), userID)
+	// Get tenant's review stats
+	reviewStats, err := h.queries.GetReviewStatsByTenantID(r.Context(), tenantID)
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to get review stats")
 		return
 	}
 
 	// Get comparison count
-	userIDs, _ := middleware.GetAccessibleUserIDs(r.Context(), h.queries, userID)
-	comparisons, err := h.queries.ListComparisonsByUserIDs(r.Context(), userIDs)
+	comparisons, err := h.queries.ListComparisonsByTenantID(r.Context(), tenantID)
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to get comparisons")
 		return
@@ -78,7 +76,7 @@ func (h *BenchmarkHandler) GetUserBenchmark(w http.ResponseWriter, r *http.Reque
 				"sample_size": b.SampleSize,
 			}
 			// Include percentiles for Pro+ users
-			if user.Plan != db.UserPlanFree && b.Percentiles != nil {
+			if plan != db.UserPlanFree && b.Percentiles != nil {
 				entry["percentiles"] = json.RawMessage(b.Percentiles)
 			}
 			benchmarkMap[string(b.Metric)] = entry
@@ -123,10 +121,12 @@ func (h *BenchmarkHandler) GetAchievements(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Check and award achievements
-	h.checkAchievements(r, userID)
+	tenantID := middleware.GetTenantID(r.Context())
 
-	achievements, err := h.queries.ListAchievementsByUserID(r.Context(), userID)
+	// Check and award achievements
+	h.checkAchievements(r, userID, tenantID)
+
+	achievements, err := h.queries.ListAchievementsByTenantID(r.Context(), tenantID)
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to list achievements")
 		return
@@ -143,14 +143,13 @@ func (h *BenchmarkHandler) GetAchievements(w http.ResponseWriter, r *http.Reques
 	JSON(w, http.StatusOK, result)
 }
 
-func (h *BenchmarkHandler) checkAchievements(r *http.Request, userID string) {
+func (h *BenchmarkHandler) checkAchievements(r *http.Request, userID string, tenantID pgtype.UUID) {
 	ctx := r.Context()
 
 	// first_comparison
-	userIDs, _ := middleware.GetAccessibleUserIDs(ctx, h.queries, userID)
-	comparisons, err := h.queries.ListComparisonsByUserIDs(ctx, userIDs)
+	comparisons, err := h.queries.ListComparisonsByTenantID(ctx, tenantID)
 	if err == nil && len(comparisons) >= 1 {
-		_ = h.queries.CreateAchievement(ctx, db.CreateAchievementParams{UserID: userID, Type: "first_comparison"})
+		_ = h.queries.CreateAchievement(ctx, db.CreateAchievementParams{UserID: userID, Type: "first_comparison", TenantID: tenantID})
 	}
 
 	// first_100_views
@@ -159,12 +158,12 @@ func (h *BenchmarkHandler) checkAchievements(r *http.Request, userID string) {
 		totalViews += int64(c.ViewCount)
 	}
 	if totalViews >= 100 {
-		_ = h.queries.CreateAchievement(ctx, db.CreateAchievementParams{UserID: userID, Type: "first_100_views"})
+		_ = h.queries.CreateAchievement(ctx, db.CreateAchievementParams{UserID: userID, Type: "first_100_views", TenantID: tenantID})
 	}
 
 	// five_star_pro
-	reviewStats, err := h.queries.GetReviewStats(ctx, userID)
+	reviewStats, err := h.queries.GetReviewStatsByTenantID(ctx, tenantID)
 	if err == nil && reviewStats.Total >= 5 && reviewStats.AvgRating >= 4.5 {
-		_ = h.queries.CreateAchievement(ctx, db.CreateAchievementParams{UserID: userID, Type: "five_star_pro"})
+		_ = h.queries.CreateAchievement(ctx, db.CreateAchievementParams{UserID: userID, Type: "five_star_pro", TenantID: tenantID})
 	}
 }
