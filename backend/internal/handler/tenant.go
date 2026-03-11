@@ -2,13 +2,17 @@ package handler
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/stripe/stripe-go/v82"
+	subscriptionPkg "github.com/stripe/stripe-go/v82/subscription"
 
+	"github.com/xiaoboyu/b4after/backend/internal/config"
 	"github.com/xiaoboyu/b4after/backend/internal/db"
 	"github.com/xiaoboyu/b4after/backend/internal/email"
 	"github.com/xiaoboyu/b4after/backend/internal/middleware"
@@ -19,10 +23,11 @@ type TenantHandler struct {
 	queries     *db.Queries
 	emailClient *email.Client
 	frontendURL string
+	cfg         *config.Config
 }
 
-func NewTenantHandler(queries *db.Queries, emailClient *email.Client, frontendURL string) *TenantHandler {
-	return &TenantHandler{queries: queries, emailClient: emailClient, frontendURL: frontendURL}
+func NewTenantHandler(queries *db.Queries, emailClient *email.Client, frontendURL string, cfg *config.Config) *TenantHandler {
+	return &TenantHandler{queries: queries, emailClient: emailClient, frontendURL: frontendURL, cfg: cfg}
 }
 
 func (h *TenantHandler) GetTenant(w http.ResponseWriter, r *http.Request) {
@@ -339,6 +344,64 @@ func (h *TenantHandler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 	_ = h.queries.AcceptTenantInvite(r.Context(), invite.ID)
 
 	JSON(w, http.StatusOK, map[string]string{"status": "accepted"})
+}
+
+type cancelServiceRequest struct {
+	Action string `json:"action"` // "downgrade" or "delete"
+}
+
+func (h *TenantHandler) CancelService(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.GetTenantID(r.Context())
+
+	var req cancelServiceRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		Error(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.Action != "downgrade" && req.Action != "delete" {
+		Error(w, http.StatusBadRequest, "action must be 'downgrade' or 'delete'")
+		return
+	}
+
+	// Get tenant to check for Stripe subscription
+	tenant, err := h.queries.GetTenantByID(r.Context(), tenantID)
+	if err != nil {
+		Error(w, http.StatusNotFound, "workspace not found")
+		return
+	}
+
+	// Cancel Stripe subscription if exists
+	if tenant.StripeSubscriptionID.Valid && tenant.StripeSubscriptionID.String != "" {
+		stripe.Key = h.cfg.StripeSecretKey
+		_, err := subscriptionPkg.Cancel(tenant.StripeSubscriptionID.String, nil)
+		if err != nil {
+			log.Printf("failed to cancel Stripe subscription %s: %v", tenant.StripeSubscriptionID.String, err)
+		}
+	}
+
+	if req.Action == "downgrade" {
+		// Set plan to free, clear Stripe IDs
+		err := h.queries.UpdateTenantPlan(r.Context(), db.UpdateTenantPlanParams{
+			ID:                   tenantID,
+			Plan:                 db.UserPlanFree,
+			StripeCustomerID:     tenant.StripeCustomerID,
+			StripeSubscriptionID: pgtype.Text{},
+		})
+		if err != nil {
+			Error(w, http.StatusInternalServerError, "failed to downgrade plan")
+			return
+		}
+		JSON(w, http.StatusOK, map[string]string{"status": "downgraded"})
+		return
+	}
+
+	// Delete tenant (cascades all data)
+	if err := h.queries.DeleteTenant(r.Context(), tenantID); err != nil {
+		Error(w, http.StatusInternalServerError, "failed to delete account")
+		return
+	}
+
+	JSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
 func tenantResponse(t db.Tenant) map[string]any {

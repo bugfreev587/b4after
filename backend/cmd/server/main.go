@@ -117,7 +117,7 @@ func main() {
 	}
 
 	// Public invite endpoint
-	tenantHandler := handler.NewTenantHandler(queries, emailClient, cfg.FrontendURL)
+	tenantHandler := handler.NewTenantHandler(queries, emailClient, cfg.FrontendURL, cfg)
 	r.Get("/api/invites/{token}", tenantHandler.GetInviteByToken)
 
 	// Protected routes (combined auth: API key or Clerk JWT)
@@ -151,6 +151,7 @@ func main() {
 			r.Group(func(r chi.Router) {
 				r.Use(middleware.RequireOwner())
 				r.Put("/api/tenant", tenantHandler.UpdateTenant)
+				r.Post("/api/tenant/cancel", tenantHandler.CancelService)
 				r.Group(func(r chi.Router) {
 					r.Use(middleware.RequirePlan(db.UserPlanBusiness))
 					r.Post("/api/tenant/invites", tenantHandler.InviteMember)

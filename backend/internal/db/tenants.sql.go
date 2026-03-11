@@ -147,6 +147,15 @@ func (q *Queries) CreateTenantMember(ctx context.Context, arg CreateTenantMember
 	return i, err
 }
 
+const deleteTenant = `-- name: DeleteTenant :exec
+DELETE FROM tenants WHERE id = $1
+`
+
+func (q *Queries) DeleteTenant(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteTenant, id)
+	return err
+}
+
 const getTenantByID = `-- name: GetTenantByID :one
 SELECT id, name, slug, plan, stripe_customer_id, stripe_subscription_id, owner_id, created_at, updated_at FROM tenants WHERE id = $1
 `

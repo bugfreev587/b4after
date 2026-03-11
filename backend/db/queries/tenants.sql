@@ -70,3 +70,6 @@ UPDATE tenant_invites SET status = 'cancelled' WHERE id = $1;
 
 -- name: AcceptTenantInvite :exec
 UPDATE tenant_invites SET status = 'accepted' WHERE id = $1;
+
+-- name: DeleteTenant :exec
+DELETE FROM tenants WHERE id = $1;
