@@ -13,27 +13,29 @@ export default async function MarketingLayout({
   return (
     <div className="min-h-screen flex flex-col bg-[#06090f] text-slate-100">
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-slate-950/80 backdrop-blur-md">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 flex items-center justify-between h-14">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 flex items-center justify-between h-14 relative">
           <Logo href={userId ? "/dashboard" : "/"} size="small" />
-          <nav className="flex items-center gap-4">
+          <nav className="hidden sm:flex items-center gap-6 absolute left-1/2 -translate-x-1/2">
             <Link
               href="/#features"
-              className="hidden sm:block text-sm font-medium text-slate-300 hover:text-white transition-colors"
+              className="text-sm font-medium text-slate-300 hover:text-white transition-colors"
             >
               Features
             </Link>
             <Link
               href="/pricing"
-              className="hidden sm:block text-sm font-medium text-slate-300 hover:text-white transition-colors"
+              className="text-sm font-medium text-slate-300 hover:text-white transition-colors"
             >
               Pricing
             </Link>
             <Link
               href="/examples"
-              className="hidden sm:block text-sm font-medium text-slate-300 hover:text-white transition-colors"
+              className="text-sm font-medium text-slate-300 hover:text-white transition-colors"
             >
               Examples
             </Link>
+          </nav>
+          <div className="flex items-center gap-4">
             {userId ? (
               <>
                 <Link
@@ -60,7 +62,7 @@ export default async function MarketingLayout({
                 </Link>
               </>
             )}
-          </nav>
+          </div>
         </div>
       </header>
       <main className="flex-1 pt-14">{children}</main>
