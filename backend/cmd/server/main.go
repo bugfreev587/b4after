@@ -175,6 +175,10 @@ func main() {
 			r.Put("/api/comparisons/{id}", compHandler.Update)
 			r.Delete("/api/comparisons/{id}", compHandler.Delete)
 
+			// Space-comparison assignments (junction table)
+			r.Post("/api/spaces/{spaceId}/comparisons/{compId}", compHandler.AddToSpace)
+			r.Delete("/api/spaces/{spaceId}/comparisons/{compId}", compHandler.RemoveFromSpace)
+
 			// Output generation
 			outputHandler := handler.NewOutputHandler(queries, r2)
 			r.Post("/api/comparisons/{id}/image", outputHandler.GenerateImage)

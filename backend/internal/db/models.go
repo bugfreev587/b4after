@@ -973,7 +973,6 @@ type Comparison struct {
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	ProcessImages   []byte             `json:"process_images"`
-	SpaceID         pgtype.UUID        `json:"space_id"`
 	Source          ComparisonSource   `json:"source"`
 	UploadRequestID pgtype.UUID        `json:"upload_request_id"`
 	TenantID        pgtype.UUID        `json:"tenant_id"`
@@ -1100,6 +1099,13 @@ type Space struct {
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 	TenantID      pgtype.UUID        `json:"tenant_id"`
+}
+
+type SpaceComparison struct {
+	SpaceID      pgtype.UUID        `json:"space_id"`
+	ComparisonID pgtype.UUID        `json:"comparison_id"`
+	Position     int32              `json:"position"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
 
 type Tenant struct {

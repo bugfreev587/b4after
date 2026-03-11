@@ -24,13 +24,14 @@ interface Comparison {
   is_published: boolean;
   view_count: number;
   source: string;
-  space_id?: string | null;
+  space_ids?: string[];
 }
 
 interface ComparisonDetailModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   comparison: Comparison | null;
+  currentSpaceId?: string;
   onUpdated: () => void;
 }
 
@@ -38,6 +39,7 @@ export function ComparisonDetailModal({
   open,
   onOpenChange,
   comparison,
+  currentSpaceId,
   onUpdated,
 }: ComparisonDetailModalProps) {
   const api = useApiClient();
@@ -57,10 +59,10 @@ export function ComparisonDetailModal({
   };
 
   const handleRemoveFromSpace = async () => {
+    if (!currentSpaceId) return;
     try {
-      await api.fetch(`/comparisons/${comparison.id}`, {
-        method: "PUT",
-        body: JSON.stringify({ space_id: null }),
+      await api.fetch(`/spaces/${currentSpaceId}/comparisons/${comparison.id}`, {
+        method: "DELETE",
       });
       toast.success("Removed from space");
       onOpenChange(false);
@@ -149,7 +151,7 @@ export function ComparisonDetailModal({
               >
                 Copy Link
               </Button>
-              {comparison.space_id && (
+              {currentSpaceId && (
                 <Button
                   variant="outline"
                   size="sm"

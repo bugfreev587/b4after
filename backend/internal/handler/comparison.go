@@ -39,7 +39,6 @@ type createComparisonRequest struct {
 	CtaText        string          `json:"cta_text"`
 	CtaURL         string          `json:"cta_url"`
 	ProcessImages  json.RawMessage `json:"process_images"`
-	SpaceID        string          `json:"space_id"`
 }
 
 func (h *ComparisonHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -70,42 +69,6 @@ func (h *ComparisonHandler) Create(w http.ResponseWriter, r *http.Request) {
 		req.Category = "other"
 	}
 
-	var spaceUUID pgtype.UUID
-	if req.SpaceID != "" {
-		spaceUID, err := uuid.Parse(req.SpaceID)
-		if err != nil {
-			Error(w, http.StatusBadRequest, "invalid space_id")
-			return
-		}
-		spaceUUID = pgtype.UUID{Bytes: spaceUID, Valid: true}
-
-		// Verify space exists and belongs to tenant
-		space, err := h.queries.GetSpaceByID(r.Context(), spaceUUID)
-		if err != nil {
-			Error(w, http.StatusNotFound, "space not found")
-			return
-		}
-		if space.TenantID != tenantID {
-			Error(w, http.StatusForbidden, "not your space")
-			return
-		}
-
-		// Enforce per-space comparison limits: free=1, pro=5, business=10
-		plan := middleware.GetTenantPlan(r.Context())
-		var maxPerSpace int64 = 1
-		switch plan {
-		case db.UserPlanPro:
-			maxPerSpace = 5
-		case db.UserPlanBusiness:
-			maxPerSpace = 10
-		}
-		compCount, err := h.queries.CountComparisonsBySpaceID(r.Context(), spaceUUID)
-		if err == nil && compCount >= maxPerSpace {
-			Error(w, http.StatusForbidden, "comparison limit per space reached — upgrade to create more")
-			return
-		}
-	}
-
 	slug := service.GenerateSlug(req.Title)
 
 	comp, err := h.queries.CreateComparison(r.Context(), db.CreateComparisonParams{
@@ -121,7 +84,6 @@ func (h *ComparisonHandler) Create(w http.ResponseWriter, r *http.Request) {
 		CtaText:        pgtype.Text{String: req.CtaText, Valid: req.CtaText != ""},
 		CtaUrl:         pgtype.Text{String: req.CtaURL, Valid: req.CtaURL != ""},
 		ProcessImages:  req.ProcessImages,
-		SpaceID:        spaceUUID,
 		Source:         db.ComparisonSourceMerchant,
 		TenantID:       tenantID,
 		CreatedBy:      pgtype.Text{String: userID, Valid: true},
@@ -146,7 +108,8 @@ func (h *ComparisonHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	result := make([]map[string]any, len(comps))
 	for i, c := range comps {
-		result[i] = comparisonResponse(c)
+		spaceIDs, _ := h.queries.ListSpaceIDsForComparison(r.Context(), c.ID)
+		result[i] = comparisonResponseWithSpaces(c, spaceIDs)
 	}
 	JSON(w, http.StatusOK, result)
 }
@@ -271,6 +234,119 @@ func (h *ComparisonHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	JSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
+// AddToSpace adds a comparison to a space (junction table).
+func (h *ComparisonHandler) AddToSpace(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.GetTenantID(r.Context())
+
+	spaceID := chi.URLParam(r, "spaceId")
+	spaceUID, err := uuid.Parse(spaceID)
+	if err != nil {
+		Error(w, http.StatusBadRequest, "invalid space id")
+		return
+	}
+	spaceUUID := pgtype.UUID{Bytes: spaceUID, Valid: true}
+
+	compID := chi.URLParam(r, "compId")
+	compUID, err := uuid.Parse(compID)
+	if err != nil {
+		Error(w, http.StatusBadRequest, "invalid comparison id")
+		return
+	}
+	compUUID := pgtype.UUID{Bytes: compUID, Valid: true}
+
+	// Verify space ownership
+	space, err := h.queries.GetSpaceByID(r.Context(), spaceUUID)
+	if err != nil {
+		Error(w, http.StatusNotFound, "space not found")
+		return
+	}
+	if space.TenantID != tenantID {
+		Error(w, http.StatusForbidden, "not your space")
+		return
+	}
+
+	// Verify comparison ownership
+	comp, err := h.queries.GetComparisonByID(r.Context(), compUUID)
+	if err != nil {
+		Error(w, http.StatusNotFound, "comparison not found")
+		return
+	}
+	if comp.TenantID != tenantID {
+		Error(w, http.StatusForbidden, "not your comparison")
+		return
+	}
+
+	// Enforce per-space comparison limits: free=1, pro=5, business=10
+	plan := middleware.GetTenantPlan(r.Context())
+	var maxPerSpace int64 = 1
+	switch plan {
+	case db.UserPlanPro:
+		maxPerSpace = 5
+	case db.UserPlanBusiness:
+		maxPerSpace = 10
+	}
+	compCount, err := h.queries.CountComparisonsBySpaceID(r.Context(), spaceUUID)
+	if err == nil && compCount >= maxPerSpace {
+		Error(w, http.StatusForbidden, "comparison limit per space reached — upgrade to create more")
+		return
+	}
+
+	err = h.queries.AddComparisonToSpace(r.Context(), db.AddComparisonToSpaceParams{
+		SpaceID:      spaceUUID,
+		ComparisonID: compUUID,
+		Position:     int32(compCount),
+	})
+	if err != nil {
+		Error(w, http.StatusInternalServerError, "failed to add comparison to space")
+		return
+	}
+
+	JSON(w, http.StatusOK, map[string]string{"status": "added"})
+}
+
+// RemoveFromSpace removes a comparison from a space (junction table).
+func (h *ComparisonHandler) RemoveFromSpace(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.GetTenantID(r.Context())
+
+	spaceID := chi.URLParam(r, "spaceId")
+	spaceUID, err := uuid.Parse(spaceID)
+	if err != nil {
+		Error(w, http.StatusBadRequest, "invalid space id")
+		return
+	}
+	spaceUUID := pgtype.UUID{Bytes: spaceUID, Valid: true}
+
+	compID := chi.URLParam(r, "compId")
+	compUID, err := uuid.Parse(compID)
+	if err != nil {
+		Error(w, http.StatusBadRequest, "invalid comparison id")
+		return
+	}
+	compUUID := pgtype.UUID{Bytes: compUID, Valid: true}
+
+	// Verify space ownership
+	space, err := h.queries.GetSpaceByID(r.Context(), spaceUUID)
+	if err != nil {
+		Error(w, http.StatusNotFound, "space not found")
+		return
+	}
+	if space.TenantID != tenantID {
+		Error(w, http.StatusForbidden, "not your space")
+		return
+	}
+
+	err = h.queries.RemoveComparisonFromSpace(r.Context(), db.RemoveComparisonFromSpaceParams{
+		SpaceID:      spaceUUID,
+		ComparisonID: compUUID,
+	})
+	if err != nil {
+		Error(w, http.StatusInternalServerError, "failed to remove comparison from space")
+		return
+	}
+
+	JSON(w, http.StatusOK, map[string]string{"status": "removed"})
+}
+
 func comparisonResponse(c db.Comparison) map[string]any {
 	resp := map[string]any{
 		"id":               uuidToString(c.ID),
@@ -287,7 +363,6 @@ func comparisonResponse(c db.Comparison) map[string]any {
 		"cta_url":          pgtextToPtr(c.CtaUrl),
 		"is_published":     c.IsPublished,
 		"view_count":       c.ViewCount,
-		"space_id":         uuidToString(c.SpaceID),
 		"source":           string(c.Source),
 		"created_at":       c.CreatedAt.Time,
 		"updated_at":       c.UpdatedAt.Time,
@@ -298,5 +373,16 @@ func comparisonResponse(c db.Comparison) map[string]any {
 	if c.ProcessImages != nil {
 		resp["process_images"] = json.RawMessage(c.ProcessImages)
 	}
+	return resp
+}
+
+// comparisonResponseWithSpaces adds space_ids to a comparison response by querying the junction table.
+func comparisonResponseWithSpaces(c db.Comparison, spaceIDs []pgtype.UUID) map[string]any {
+	resp := comparisonResponse(c)
+	ids := make([]string, 0, len(spaceIDs))
+	for _, sid := range spaceIDs {
+		ids = append(ids, uuidToString(sid))
+	}
+	resp["space_ids"] = ids
 	return resp
 }

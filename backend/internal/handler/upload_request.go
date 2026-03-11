@@ -262,7 +262,6 @@ func (h *UploadRequestHandler) Approve(w http.ResponseWriter, r *http.Request) {
 		AfterImageUrl:   afterURL,
 		BeforeLabel:     "Before",
 		AfterLabel:      "After",
-		SpaceID:         ur.SpaceID,
 		Source:          db.ComparisonSourceClient,
 		UploadRequestID: requestUUID,
 		TenantID:        tenantID,
@@ -270,6 +269,15 @@ func (h *UploadRequestHandler) Approve(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to create comparison from request")
 		return
+	}
+
+	// Add comparison to the upload request's space
+	if ur.SpaceID.Valid {
+		_ = h.queries.AddComparisonToSpace(r.Context(), db.AddComparisonToSpaceParams{
+			SpaceID:      ur.SpaceID,
+			ComparisonID: comp.ID,
+			Position:     0,
+		})
 	}
 
 	// Send thank you email

@@ -61,7 +61,11 @@ function NewComparisonContent() {
     try {
       const result = await api.fetch<{ id: string }>("/comparisons", {
         method: "POST",
-        body: JSON.stringify({ ...data, space_id: selectedSpaceId }),
+        body: JSON.stringify(data),
+      });
+      // Add the new comparison to the selected space
+      await api.fetch(`/spaces/${selectedSpaceId}/comparisons/${result.id}`, {
+        method: "POST",
       });
       toast.success("Comparison created!");
       router.push(`/dashboard/${result.id}`);

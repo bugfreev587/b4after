@@ -60,7 +60,7 @@ interface Comparison {
   is_published: boolean;
   view_count: number;
   source: string;
-  space_id: string | null;
+  space_ids: string[];
 }
 
 interface UploadRequest {
@@ -88,6 +88,7 @@ export default function WorkspacePage() {
   const [detailComparison, setDetailComparison] = useState<Comparison | null>(
     null,
   );
+  const [detailSpaceId, setDetailSpaceId] = useState<string | undefined>(undefined);
   const [addPickerSpaceId, setAddPickerSpaceId] = useState<string | null>(null);
 
   // New space inline creation
@@ -129,9 +130,9 @@ export default function WorkspacePage() {
   }, [loadData]);
 
   const comparisonsForSpace = (spaceId: string) =>
-    comparisons.filter((c) => c.space_id === spaceId);
+    comparisons.filter((c) => c.space_ids.includes(spaceId));
 
-  const unassignedComparisons = comparisons.filter((c) => !c.space_id);
+  const unassignedComparisons = comparisons.filter((c) => c.space_ids.length === 0);
 
   const pendingRequests = requests.filter(
     (r) => r.status !== "approved" && r.status !== "rejected",
@@ -142,15 +143,34 @@ export default function WorkspacePage() {
     spaceId: string | null,
   ) => {
     try {
-      await api.fetch(`/comparisons/${comparisonId}`, {
-        method: "PUT",
-        body: JSON.stringify({ space_id: spaceId }),
-      });
-      setComparisons((prev) =>
-        prev.map((c) =>
-          c.id === comparisonId ? { ...c, space_id: spaceId } : c,
-        ),
-      );
+      if (spaceId) {
+        // Add to space via junction table
+        await api.fetch(`/spaces/${spaceId}/comparisons/${comparisonId}`, {
+          method: "POST",
+        });
+        setComparisons((prev) =>
+          prev.map((c) =>
+            c.id === comparisonId
+              ? { ...c, space_ids: [...c.space_ids.filter((id) => id !== spaceId), spaceId] }
+              : c,
+          ),
+        );
+      } else {
+        // Remove from all spaces — reload to get fresh state
+        const comp = comparisons.find((c) => c.id === comparisonId);
+        if (comp) {
+          for (const sid of comp.space_ids) {
+            await api.fetch(`/spaces/${sid}/comparisons/${comparisonId}`, {
+              method: "DELETE",
+            });
+          }
+          setComparisons((prev) =>
+            prev.map((c) =>
+              c.id === comparisonId ? { ...c, space_ids: [] } : c,
+            ),
+          );
+        }
+      }
     } catch (err: unknown) {
       toast.error(
         err instanceof Error ? err.message : "Failed to move comparison",
@@ -162,6 +182,25 @@ export default function WorkspacePage() {
     setActiveDragId(event.active.id as string);
   };
 
+  const removeFromSpace = async (comparisonId: string, spaceId: string) => {
+    try {
+      await api.fetch(`/spaces/${spaceId}/comparisons/${comparisonId}`, {
+        method: "DELETE",
+      });
+      setComparisons((prev) =>
+        prev.map((c) =>
+          c.id === comparisonId
+            ? { ...c, space_ids: c.space_ids.filter((id) => id !== spaceId) }
+            : c,
+        ),
+      );
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to remove comparison",
+      );
+    }
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveDragId(null);
     const { active, over } = event;
@@ -170,8 +209,8 @@ export default function WorkspacePage() {
     const comparisonId = active.id as string;
     const dropTarget = over.id as string;
 
-    // Dropping on "library" means unassign
     if (dropTarget === "library") {
+      // Dropping on library: remove from all spaces
       assignComparison(comparisonId, null);
     } else if (dropTarget.startsWith("space-")) {
       const spaceId = dropTarget.replace("space-", "");
@@ -255,7 +294,7 @@ export default function WorkspacePage() {
               onPreview={() =>
                 window.open(`/w/${space.slug}`, "_blank")
               }
-              onComparisonClick={(c) => setDetailComparison(c)}
+              onComparisonClick={(c) => { setDetailComparison(c); setDetailSpaceId(space.id); }}
               onAddClick={() => {
                 if (unassignedComparisons.length > 0) {
                   setAddPickerSpaceId(space.id);
@@ -312,12 +351,12 @@ export default function WorkspacePage() {
                     <DraggableComparison
                       key={comp.id}
                       comparison={comp}
-                      onClick={() => setDetailComparison(comp)}
+                      onClick={() => { setDetailComparison(comp); setDetailSpaceId(undefined); }}
                     >
                       <LibraryCard
                         comparison={comp}
                         spaces={spaces}
-                        onViewDetails={() => setDetailComparison(comp)}
+                        onViewDetails={() => { setDetailComparison(comp); setDetailSpaceId(undefined); }}
                         onAssign={(spaceId) =>
                           assignComparison(comp.id, spaceId)
                         }
@@ -415,9 +454,10 @@ export default function WorkspacePage() {
       <ComparisonDetailModal
         open={!!detailComparison}
         onOpenChange={(o) => {
-          if (!o) setDetailComparison(null);
+          if (!o) { setDetailComparison(null); setDetailSpaceId(undefined); }
         }}
         comparison={detailComparison}
+        currentSpaceId={detailSpaceId}
         onUpdated={loadData}
       />
     </DndContext>
