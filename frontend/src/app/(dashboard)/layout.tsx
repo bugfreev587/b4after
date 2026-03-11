@@ -88,51 +88,51 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
       <header className="sticky top-0 z-50 bg-[#1A1425]/95 backdrop-blur-lg border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-14">
-          <div className="flex items-center gap-6">
-            <Logo href="/dashboard" size="small" />
-            <nav className="hidden lg:flex items-center gap-0.5">
-              {NAV_LINKS.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`relative px-3 py-1.5 text-sm font-medium transition ${
-                    isActive(link.href)
+          <Logo href="/dashboard" size="small" />
+
+          {/* Center nav */}
+          <nav className="hidden lg:flex items-center gap-0.5">
+            {NAV_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`relative px-3 py-1.5 text-sm font-medium transition ${
+                  isActive(link.href)
+                    ? "text-white"
+                    : "text-gray-400 hover:text-white"
+                }`}
+              >
+                {link.label}
+                {isActive(link.href) && (
+                  <span className="absolute bottom-0 left-1 right-1 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" />
+                )}
+              </Link>
+            ))}
+            {/* Management dropdown — Business Owner only */}
+            {showManagement && (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className={`relative px-3 py-1.5 text-sm font-medium transition outline-none ${
+                    isActive("/dashboard/members")
                       ? "text-white"
                       : "text-gray-400 hover:text-white"
                   }`}
                 >
-                  {link.label}
-                  {isActive(link.href) && (
+                  Management
+                  {isActive("/dashboard/members") && (
                     <span className="absolute bottom-0 left-1 right-1 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" />
                   )}
-                </Link>
-              ))}
-              {/* Management dropdown — Business Owner only */}
-              {showManagement && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    className={`relative px-3 py-1.5 text-sm font-medium transition outline-none ${
-                      isActive("/dashboard/members")
-                        ? "text-white"
-                        : "text-gray-400 hover:text-white"
-                    }`}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem
+                    onClick={() => router.push("/dashboard/members")}
                   >
-                    Management
-                    {isActive("/dashboard/members") && (
-                      <span className="absolute bottom-0 left-1 right-1 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" />
-                    )}
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    <DropdownMenuItem
-                      onClick={() => router.push("/dashboard/members")}
-                    >
-                      Members
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </nav>
-          </div>
+                    Members
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </nav>
 
           <div className="flex items-center gap-3">
             <Button
