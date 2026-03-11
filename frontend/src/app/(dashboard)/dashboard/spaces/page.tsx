@@ -28,6 +28,13 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   Settings,
   Copy,
   Link2,
@@ -35,6 +42,7 @@ import {
   MoreHorizontal,
   Plus,
   GripVertical,
+  X,
 } from "lucide-react";
 
 interface Space {
@@ -90,6 +98,10 @@ export default function WorkspacePage() {
   );
   const [detailSpaceId, setDetailSpaceId] = useState<string | undefined>(undefined);
   const [addPickerSpaceId, setAddPickerSpaceId] = useState<string | null>(null);
+
+  // Confirm delete
+  const [confirmDeleteComp, setConfirmDeleteComp] = useState<Comparison | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // New space inline creation
   const [creatingSpace, setCreatingSpace] = useState(false);
@@ -241,6 +253,21 @@ export default function WorkspacePage() {
     }
   };
 
+  const handlePermanentDelete = async () => {
+    if (!confirmDeleteComp) return;
+    setDeleting(true);
+    try {
+      await api.fetch(`/comparisons/${confirmDeleteComp.id}`, { method: "DELETE" });
+      toast.success("Comparison deleted");
+      setConfirmDeleteComp(null);
+      loadData();
+    } catch {
+      toast.error("Failed to delete comparison");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const copyPublicLink = (space: Space) => {
     const url = `${window.location.origin}/w/${space.slug}`;
     navigator.clipboard.writeText(url);
@@ -295,6 +322,7 @@ export default function WorkspacePage() {
                 window.open(`/w/${space.slug}`, "_blank")
               }
               onComparisonClick={(c) => { setDetailComparison(c); setDetailSpaceId(space.id); }}
+              onRemoveFromSpace={(compId) => removeFromSpace(compId, space.id)}
               onAddClick={() => {
                 if (unassignedComparisons.length > 0) {
                   setAddPickerSpaceId(space.id);
@@ -360,17 +388,7 @@ export default function WorkspacePage() {
                         onAssign={(spaceId) =>
                           assignComparison(comp.id, spaceId)
                         }
-                        onDelete={async () => {
-                          try {
-                            await api.fetch(`/comparisons/${comp.id}`, {
-                              method: "DELETE",
-                            });
-                            toast.success("Deleted");
-                            loadData();
-                          } catch {
-                            toast.error("Failed to delete");
-                          }
-                        }}
+                        onDelete={() => setConfirmDeleteComp(comp)}
                       />
                     </DraggableComparison>
                   ))}
@@ -460,6 +478,31 @@ export default function WorkspacePage() {
         currentSpaceId={detailSpaceId}
         onUpdated={loadData}
       />
+
+      {/* Confirm delete dialog */}
+      <Dialog
+        open={!!confirmDeleteComp}
+        onOpenChange={(o) => { if (!o) setConfirmDeleteComp(null); }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Comparison</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to permanently delete{" "}
+            <span className="font-medium text-foreground">{confirmDeleteComp?.title}</span>?
+            This action cannot be undone.
+          </p>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setConfirmDeleteComp(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" disabled={deleting} onClick={handlePermanentDelete}>
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DndContext>
   );
 }
@@ -475,6 +518,7 @@ function SpaceRow({
   onCopyEmbed,
   onPreview,
   onComparisonClick,
+  onRemoveFromSpace,
   onAddClick,
   onAssign,
   unassignedComparisons,
@@ -489,6 +533,7 @@ function SpaceRow({
   onCopyEmbed: () => void;
   onPreview: () => void;
   onComparisonClick: (c: Comparison) => void;
+  onRemoveFromSpace: (compId: string) => void;
   onAddClick: () => void;
   onAssign: (compId: string, spaceId: string | null) => void;
   unassignedComparisons: Comparison[];
@@ -566,6 +611,13 @@ function SpaceRow({
                 <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-70 transition">
                   <GripVertical className="w-3 h-3 text-white" />
                 </div>
+                <button
+                  className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition p-0.5 bg-black/60 hover:bg-red-600 rounded-full"
+                  title="Remove from space"
+                  onClick={(e) => { e.stopPropagation(); onRemoveFromSpace(comp.id); }}
+                >
+                  <X className="w-3 h-3 text-white" />
+                </button>
               </div>
             </DraggableComparison>
           ))}
@@ -644,8 +696,17 @@ function LibraryCard({
       </div>
       <p className="text-xs mt-1 truncate">{comparison.title}</p>
 
+      {/* Delete icon */}
+      <button
+        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition p-0.5 bg-black/60 hover:bg-red-600 rounded-full z-10"
+        title="Delete comparison"
+        onClick={(e) => { e.stopPropagation(); onDelete(); }}
+      >
+        <X className="w-3 h-3 text-white" />
+      </button>
+
       {/* Menu */}
-      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition">
+      <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition">
         <DropdownMenu>
           <DropdownMenuTrigger className="p-1 bg-black/60 rounded outline-none">
             <MoreHorizontal className="w-3 h-3 text-white" />
