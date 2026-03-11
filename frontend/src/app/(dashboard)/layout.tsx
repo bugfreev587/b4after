@@ -108,30 +108,6 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 )}
               </Link>
             ))}
-            {/* Management dropdown — Business Owner only */}
-            {showManagement && (
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  className={`relative px-3 py-1.5 text-sm font-medium transition outline-none ${
-                    isActive("/dashboard/members")
-                      ? "text-white"
-                      : "text-gray-400 hover:text-white"
-                  }`}
-                >
-                  Management
-                  {isActive("/dashboard/members") && (
-                    <span className="absolute bottom-0 left-1 right-1 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" />
-                  )}
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuItem
-                    onClick={() => router.push("/dashboard/members")}
-                  >
-                    Members
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
           </nav>
 
           <div className="flex items-center gap-3">
@@ -186,11 +162,6 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                     Billing
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem
-                  onClick={() => router.push("/dashboard/settings")}
-                >
-                  Settings
-                </DropdownMenuItem>
                 {showManagement && (
                   <DropdownMenuItem
                     onClick={() => router.push("/dashboard/members")}
@@ -198,6 +169,11 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                     Members
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuItem
+                  onClick={() => router.push("/dashboard/settings")}
+                >
+                  Settings
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => signOut(() => router.push("/"))}
@@ -271,19 +247,6 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 {link.label}
               </Link>
             ))}
-            {showManagement && (
-              <Link
-                href="/dashboard/members"
-                onClick={() => setMobileOpen(false)}
-                className={`block px-3 py-2 rounded-md text-sm font-medium transition ${
-                  isActive("/dashboard/members")
-                    ? "bg-white/10 text-white"
-                    : "text-gray-400 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                Members
-              </Link>
-            )}
 
             {/* Separator + utility links */}
             <div className="border-t border-white/10 my-3" />
@@ -294,6 +257,15 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 className="block px-3 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition"
               >
                 Billing
+              </Link>
+            )}
+            {showManagement && (
+              <Link
+                href="/dashboard/members"
+                onClick={() => setMobileOpen(false)}
+                className="block px-3 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition"
+              >
+                Members
               </Link>
             )}
             <Link
