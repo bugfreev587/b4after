@@ -153,6 +153,33 @@ func (c *Client) SendUploadThankYou(clientEmail, clientName string) {
 	}()
 }
 
+// SendNewLeadNotification notifies a merchant about a new lead.
+func (c *Client) SendNewLeadNotification(merchantEmail, leadName, leadType, dashboardURL string) {
+	if c.apiKey == "" {
+		log.Printf("email: skipping lead notification (no Resend API key)")
+		return
+	}
+
+	typeLabel := "contact inquiry"
+	if leadType == "booking" {
+		typeLabel = "booking request"
+	}
+
+	go func() {
+		body := sendRequest{
+			From:    "BeforeAfter.io <noreply@beforeafter.io>",
+			To:      []string{merchantEmail},
+			Subject: fmt.Sprintf("New %s from %s", typeLabel, leadName),
+			HTML: fmt.Sprintf(
+				`<h2>New %s!</h2>
+<p><strong>%s</strong> has submitted a %s through your BeforeAfter.io page.</p>
+<p><a href="%s" style="display:inline-block;padding:12px 24px;background:#7c3aed;color:white;text-decoration:none;border-radius:8px;">View in Dashboard</a></p>`,
+				typeLabel, leadName, typeLabel, dashboardURL),
+		}
+		c.send(body, "lead notification", merchantEmail)
+	}()
+}
+
 // send is a helper that sends an email via Resend API.
 func (c *Client) send(body sendRequest, emailType, recipient string) {
 	jsonBody, err := json.Marshal(body)

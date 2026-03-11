@@ -70,7 +70,7 @@ SELECT DISTINCT c.user_id,
     'my-comparisons-' || SUBSTR(MD5(c.user_id), 1, 6),
     'My Comparisons',
     'Default space for existing comparisons',
-    'other'
+    'other'::comparison_category
 FROM comparisons c;
 
 -- Assign existing comparisons to their user's default space

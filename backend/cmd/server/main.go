@@ -94,6 +94,22 @@ func main() {
 	r.Post("/api/requests/{token}/upload", uploadReqHandler.UploadPhoto)
 	r.Post("/api/requests/{token}/submit", uploadReqHandler.SubmitRequest)
 
+	// Public reviews
+	reviewHandler := handler.NewReviewHandler(queries)
+	r.Post("/api/reviews/{userId}", reviewHandler.Create)
+	r.Get("/api/reviews/public/{userId}", reviewHandler.GetPublicReviews)
+
+	// Public timeline by slug
+	timelineHandler := handler.NewTimelineHandler(queries)
+	r.Get("/api/timelines/{slug}/public", timelineHandler.GetPublic)
+
+	// Public leads (strict rate limit: 5 req/min per IP)
+	leadHandler := handler.NewLeadHandler(queries, emailClient)
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RateLimitMiddleware(rate.Limit(5.0/60.0), 5))
+		r.Post("/api/leads", leadHandler.Create)
+	})
+
 	// Stripe webhook (public, verified by signature)
 	if cfg.StripeSecretKey != "" {
 		billingHandler := handler.NewBillingHandler(queries, cfg)
@@ -182,6 +198,58 @@ func main() {
 		r.Post("/api/requests/{id}/remind", uploadReqHandler.SendReminder)
 		r.Post("/api/requests/{id}/approve", uploadReqHandler.Approve)
 		r.Post("/api/requests/{id}/reject", uploadReqHandler.Reject)
+
+		// Reviews (protected)
+		r.Get("/api/reviews", reviewHandler.List)
+		r.Get("/api/reviews/stats", reviewHandler.GetStats)
+		r.Post("/api/reviews/{id}/publish", reviewHandler.Publish)
+		r.Post("/api/reviews/{id}/hide", reviewHandler.Hide)
+		r.Delete("/api/reviews/{id}", reviewHandler.Delete)
+		// Reply requires Pro+
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.RequirePlan(queries, db.UserPlanPro, db.UserPlanBusiness))
+			r.Post("/api/reviews/{id}/reply", reviewHandler.Reply)
+		})
+
+		// Timelines
+		r.Get("/api/timelines", timelineHandler.List)
+		r.Post("/api/timelines", timelineHandler.Create)
+		r.Get("/api/timelines/{id}", timelineHandler.Get)
+		r.Put("/api/timelines/{id}", timelineHandler.Update)
+		r.Delete("/api/timelines/{id}", timelineHandler.Delete)
+		r.Post("/api/timelines/{id}/entries", timelineHandler.CreateEntry)
+		r.Put("/api/timelines/{id}/entries/{entryId}", timelineHandler.UpdateEntry)
+		r.Delete("/api/timelines/{id}/entries/{entryId}", timelineHandler.DeleteEntry)
+		r.Post("/api/timelines/{id}/entries/reorder", timelineHandler.ReorderEntries)
+
+		// Materials (QR)
+		materialHandler := handler.NewMaterialHandler(queries, r2)
+		r.Post("/api/materials/generate", materialHandler.Generate)
+
+		// Leads (protected)
+		r.Get("/api/leads", leadHandler.List)
+		r.Get("/api/leads/stats", leadHandler.GetStats)
+		r.Put("/api/leads/{id}/status", leadHandler.UpdateStatus)
+		r.Get("/api/leads/form-config", leadHandler.GetFormConfig)
+		r.Put("/api/leads/form-config", leadHandler.UpdateFormConfig)
+
+		// Benchmarks
+		benchmarkHandler := handler.NewBenchmarkHandler(queries)
+		r.Get("/api/benchmarks/me", benchmarkHandler.GetUserBenchmark)
+		r.Get("/api/benchmarks/{category}", benchmarkHandler.GetIndustryBenchmark)
+		// Achievements (Pro+)
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.RequirePlan(queries, db.UserPlanPro, db.UserPlanBusiness))
+			r.Get("/api/achievements", benchmarkHandler.GetAchievements)
+		})
+
+		// Content Calendar
+		calendarHandler := handler.NewContentCalendarHandler(queries)
+		r.Get("/api/content-calendar", calendarHandler.List)
+		r.Post("/api/content-calendar/generate", calendarHandler.Generate)
+		r.Put("/api/content-calendar/{id}/status", calendarHandler.UpdateStatus)
+		r.Get("/api/content-calendar/settings", calendarHandler.GetSettings)
+		r.Put("/api/content-calendar/settings", calendarHandler.UpdateSettings)
 
 		// Teams (business only)
 		teamHandler := handler.NewTeamHandler(queries, emailClient, cfg.FrontendURL)

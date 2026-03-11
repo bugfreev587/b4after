@@ -55,6 +55,93 @@ func (ns NullAnalyticsEventType) Value() (driver.Value, error) {
 	return string(ns.AnalyticsEventType), nil
 }
 
+type BenchmarkMetric string
+
+const (
+	BenchmarkMetricAvgViews         BenchmarkMetric = "avg_views"
+	BenchmarkMetricAvgRating        BenchmarkMetric = "avg_rating"
+	BenchmarkMetricConversionRate   BenchmarkMetric = "conversion_rate"
+	BenchmarkMetricComparisonsCount BenchmarkMetric = "comparisons_count"
+)
+
+func (e *BenchmarkMetric) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = BenchmarkMetric(s)
+	case string:
+		*e = BenchmarkMetric(s)
+	default:
+		return fmt.Errorf("unsupported scan type for BenchmarkMetric: %T", src)
+	}
+	return nil
+}
+
+type NullBenchmarkMetric struct {
+	BenchmarkMetric BenchmarkMetric `json:"benchmark_metric"`
+	Valid           bool            `json:"valid"` // Valid is true if BenchmarkMetric is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullBenchmarkMetric) Scan(value interface{}) error {
+	if value == nil {
+		ns.BenchmarkMetric, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.BenchmarkMetric.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullBenchmarkMetric) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.BenchmarkMetric), nil
+}
+
+type CalendarStatus string
+
+const (
+	CalendarStatusScheduled CalendarStatus = "scheduled"
+	CalendarStatusPublished CalendarStatus = "published"
+	CalendarStatusSkipped   CalendarStatus = "skipped"
+)
+
+func (e *CalendarStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CalendarStatus(s)
+	case string:
+		*e = CalendarStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CalendarStatus: %T", src)
+	}
+	return nil
+}
+
+type NullCalendarStatus struct {
+	CalendarStatus CalendarStatus `json:"calendar_status"`
+	Valid          bool           `json:"valid"` // Valid is true if CalendarStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCalendarStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.CalendarStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CalendarStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCalendarStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CalendarStatus), nil
+}
+
 type ComparisonCategory string
 
 const (
@@ -142,6 +229,94 @@ func (ns NullComparisonSource) Value() (driver.Value, error) {
 	return string(ns.ComparisonSource), nil
 }
 
+type ContentPlatform string
+
+const (
+	ContentPlatformInstagram ContentPlatform = "instagram"
+	ContentPlatformFacebook  ContentPlatform = "facebook"
+	ContentPlatformTiktok    ContentPlatform = "tiktok"
+	ContentPlatformTwitter   ContentPlatform = "twitter"
+)
+
+func (e *ContentPlatform) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ContentPlatform(s)
+	case string:
+		*e = ContentPlatform(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ContentPlatform: %T", src)
+	}
+	return nil
+}
+
+type NullContentPlatform struct {
+	ContentPlatform ContentPlatform `json:"content_platform"`
+	Valid           bool            `json:"valid"` // Valid is true if ContentPlatform is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullContentPlatform) Scan(value interface{}) error {
+	if value == nil {
+		ns.ContentPlatform, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ContentPlatform.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullContentPlatform) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ContentPlatform), nil
+}
+
+type ContentType string
+
+const (
+	ContentTypeBeforeAfter ContentType = "before_after"
+	ContentTypeReviewQuote ContentType = "review_quote"
+	ContentTypeTimeline    ContentType = "timeline"
+	ContentTypeTip         ContentType = "tip"
+)
+
+func (e *ContentType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ContentType(s)
+	case string:
+		*e = ContentType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ContentType: %T", src)
+	}
+	return nil
+}
+
+type NullContentType struct {
+	ContentType ContentType `json:"content_type"`
+	Valid       bool        `json:"valid"` // Valid is true if ContentType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullContentType) Scan(value interface{}) error {
+	if value == nil {
+		ns.ContentType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ContentType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullContentType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ContentType), nil
+}
+
 type CtaType string
 
 const (
@@ -226,6 +401,179 @@ func (ns NullDeviceType) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.DeviceType), nil
+}
+
+type FormType string
+
+const (
+	FormTypeContact FormType = "contact"
+	FormTypeBooking FormType = "booking"
+	FormTypeBoth    FormType = "both"
+)
+
+func (e *FormType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = FormType(s)
+	case string:
+		*e = FormType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for FormType: %T", src)
+	}
+	return nil
+}
+
+type NullFormType struct {
+	FormType FormType `json:"form_type"`
+	Valid    bool     `json:"valid"` // Valid is true if FormType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullFormType) Scan(value interface{}) error {
+	if value == nil {
+		ns.FormType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.FormType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullFormType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.FormType), nil
+}
+
+type LeadStatus string
+
+const (
+	LeadStatusNew       LeadStatus = "new"
+	LeadStatusContacted LeadStatus = "contacted"
+	LeadStatusBooked    LeadStatus = "booked"
+	LeadStatusCompleted LeadStatus = "completed"
+	LeadStatusCancelled LeadStatus = "cancelled"
+)
+
+func (e *LeadStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = LeadStatus(s)
+	case string:
+		*e = LeadStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for LeadStatus: %T", src)
+	}
+	return nil
+}
+
+type NullLeadStatus struct {
+	LeadStatus LeadStatus `json:"lead_status"`
+	Valid      bool       `json:"valid"` // Valid is true if LeadStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullLeadStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.LeadStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.LeadStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullLeadStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.LeadStatus), nil
+}
+
+type LeadType string
+
+const (
+	LeadTypeContact LeadType = "contact"
+	LeadTypeBooking LeadType = "booking"
+)
+
+func (e *LeadType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = LeadType(s)
+	case string:
+		*e = LeadType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for LeadType: %T", src)
+	}
+	return nil
+}
+
+type NullLeadType struct {
+	LeadType LeadType `json:"lead_type"`
+	Valid    bool     `json:"valid"` // Valid is true if LeadType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullLeadType) Scan(value interface{}) error {
+	if value == nil {
+		ns.LeadType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.LeadType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullLeadType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.LeadType), nil
+}
+
+type ReviewStatus string
+
+const (
+	ReviewStatusPending   ReviewStatus = "pending"
+	ReviewStatusPublished ReviewStatus = "published"
+	ReviewStatusHidden    ReviewStatus = "hidden"
+)
+
+func (e *ReviewStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ReviewStatus(s)
+	case string:
+		*e = ReviewStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ReviewStatus: %T", src)
+	}
+	return nil
+}
+
+type NullReviewStatus struct {
+	ReviewStatus ReviewStatus `json:"review_status"`
+	Valid        bool         `json:"valid"` // Valid is true if ReviewStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullReviewStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ReviewStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ReviewStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullReviewStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ReviewStatus), nil
 }
 
 type TeamRole string
@@ -446,6 +794,13 @@ func (ns NullUserPlan) Value() (driver.Value, error) {
 	return string(ns.UserPlan), nil
 }
 
+type Achievement struct {
+	ID         pgtype.UUID        `json:"id"`
+	UserID     string             `json:"user_id"`
+	Type       string             `json:"type"`
+	AchievedAt pgtype.Timestamptz `json:"achieved_at"`
+}
+
 type Analytic struct {
 	ID           pgtype.UUID        `json:"id"`
 	ComparisonID pgtype.UUID        `json:"comparison_id"`
@@ -492,6 +847,40 @@ type Comparison struct {
 	UploadRequestID pgtype.UUID        `json:"upload_request_id"`
 }
 
+type ContentCalendar struct {
+	ID              pgtype.UUID        `json:"id"`
+	UserID          string             `json:"user_id"`
+	ComparisonID    pgtype.UUID        `json:"comparison_id"`
+	ReviewID        pgtype.UUID        `json:"review_id"`
+	ScheduledDate   pgtype.Date        `json:"scheduled_date"`
+	ContentType     ContentType        `json:"content_type"`
+	Platform        ContentPlatform    `json:"platform"`
+	CaptionTemplate pgtype.Text        `json:"caption_template"`
+	Status          CalendarStatus     `json:"status"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
+type ContentCalendarSetting struct {
+	ID                    pgtype.UUID        `json:"id"`
+	UserID                string             `json:"user_id"`
+	WeeklyFrequency       int32              `json:"weekly_frequency"`
+	PreferredPlatforms    []byte             `json:"preferred_platforms"`
+	PreferredContentTypes []byte             `json:"preferred_content_types"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+}
+
+type FormConfig struct {
+	ID               pgtype.UUID        `json:"id"`
+	UserID           string             `json:"user_id"`
+	FormType         FormType           `json:"form_type"`
+	Services         []byte             `json:"services"`
+	WhatsappNumber   pgtype.Text        `json:"whatsapp_number"`
+	AutoReplyMessage pgtype.Text        `json:"auto_reply_message"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Gallery struct {
 	ID          pgtype.UUID        `json:"id"`
 	UserID      string             `json:"user_id"`
@@ -507,6 +896,52 @@ type GalleryComparison struct {
 	GalleryID    pgtype.UUID `json:"gallery_id"`
 	ComparisonID pgtype.UUID `json:"comparison_id"`
 	SortOrder    int32       `json:"sort_order"`
+}
+
+type IndustryBenchmark struct {
+	ID           pgtype.UUID        `json:"id"`
+	Category     string             `json:"category"`
+	Metric       BenchmarkMetric    `json:"metric"`
+	Value        float64            `json:"value"`
+	SampleSize   int32              `json:"sample_size"`
+	Percentiles  []byte             `json:"percentiles"`
+	CalculatedAt pgtype.Timestamptz `json:"calculated_at"`
+}
+
+type Lead struct {
+	ID            pgtype.UUID        `json:"id"`
+	UserID        string             `json:"user_id"`
+	ComparisonID  pgtype.UUID        `json:"comparison_id"`
+	SpaceID       pgtype.UUID        `json:"space_id"`
+	Type          LeadType           `json:"type"`
+	Name          string             `json:"name"`
+	Phone         pgtype.Text        `json:"phone"`
+	Email         pgtype.Text        `json:"email"`
+	Service       pgtype.Text        `json:"service"`
+	PreferredDate pgtype.Text        `json:"preferred_date"`
+	PreferredTime pgtype.Text        `json:"preferred_time"`
+	Message       pgtype.Text        `json:"message"`
+	Status        LeadStatus         `json:"status"`
+	SourceUrl     pgtype.Text        `json:"source_url"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Review struct {
+	ID               pgtype.UUID        `json:"id"`
+	ComparisonID     pgtype.UUID        `json:"comparison_id"`
+	SpaceID          pgtype.UUID        `json:"space_id"`
+	UserID           string             `json:"user_id"`
+	ReviewerName     string             `json:"reviewer_name"`
+	ReviewerPhotoUrl pgtype.Text        `json:"reviewer_photo_url"`
+	ReviewerContact  pgtype.Text        `json:"reviewer_contact"`
+	Rating           int32              `json:"rating"`
+	Content          string             `json:"content"`
+	Reply            pgtype.Text        `json:"reply"`
+	ReplyAt          pgtype.Timestamptz `json:"reply_at"`
+	Status           ReviewStatus       `json:"status"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Space struct {
@@ -533,6 +968,32 @@ type TeamMember struct {
 	TeamOwnerID string             `json:"team_owner_id"`
 	Role        TeamRole           `json:"role"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type Timeline struct {
+	ID          pgtype.UUID        `json:"id"`
+	UserID      string             `json:"user_id"`
+	SpaceID     pgtype.UUID        `json:"space_id"`
+	Slug        string             `json:"slug"`
+	Title       string             `json:"title"`
+	Description pgtype.Text        `json:"description"`
+	Category    pgtype.Text        `json:"category"`
+	CtaText     pgtype.Text        `json:"cta_text"`
+	CtaUrl      pgtype.Text        `json:"cta_url"`
+	IsPublic    bool               `json:"is_public"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type TimelineEntry struct {
+	ID         pgtype.UUID        `json:"id"`
+	TimelineID pgtype.UUID        `json:"timeline_id"`
+	ImageUrl   string             `json:"image_url"`
+	Label      string             `json:"label"`
+	Date       pgtype.Date        `json:"date"`
+	Note       pgtype.Text        `json:"note"`
+	SortOrder  int32              `json:"sort_order"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 }
 
 type UploadRequest struct {
