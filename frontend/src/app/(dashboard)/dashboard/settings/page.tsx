@@ -1,59 +1,85 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useApiClient } from "@/lib/api";
+import { useTenant } from "@/lib/tenant-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
-interface User {
-  plan: string;
-}
-
 interface SubdomainData {
   subdomain: string | null;
   domain_base: string;
 }
 
+interface ApiKeyData {
+  api_key: string | null;
+}
+
 export default function SettingsPage() {
   const api = useApiClient();
-  const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [subdomainData, setSubdomainData] = useState<SubdomainData | null>(
-    null
-  );
+  const { tenant, isOwner, plan, refetch: refetchTenant } = useTenant();
+  const [workspaceName, setWorkspaceName] = useState("");
+  const [subdomainData, setSubdomainData] = useState<SubdomainData | null>(null);
   const [subdomain, setSubdomain] = useState("");
+  const [apiKeyData, setApiKeyData] = useState<ApiKeyData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [savingName, setSavingName] = useState(false);
+  const [savingSubdomain, setSavingSubdomain] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
-      const u = await api.fetch<User>("/users/me");
-      setUser(u);
-      if (u.plan === "business") {
-        const sd = await api.fetch<SubdomainData>("/settings/subdomain");
-        setSubdomainData(sd);
-        if (sd.subdomain) {
-          setSubdomain(sd.subdomain);
+      if (plan === "business") {
+        const [sd, ak] = await Promise.all([
+          api.fetch<SubdomainData>("/settings/subdomain").catch(() => null),
+          api.fetch<ApiKeyData>("/settings/api-key").catch(() => null),
+        ]);
+        if (sd) {
+          setSubdomainData(sd);
+          if (sd.subdomain) setSubdomain(sd.subdomain);
         }
+        if (ak) setApiKeyData(ak);
       }
     } catch {
       toast.error("Failed to load settings");
     } finally {
       setLoading(false);
     }
-  }, [api]);
+  }, [api, plan]);
 
   useEffect(() => {
+    if (tenant) {
+      setWorkspaceName(tenant.name);
+      setLoading(false);
+    }
     fetchData();
-  }, [fetchData]);
+  }, [tenant, fetchData]);
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSaveName = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
+    if (!workspaceName.trim()) return;
+    setSavingName(true);
+    try {
+      await api.fetch("/tenant", {
+        method: "PUT",
+        body: JSON.stringify({ name: workspaceName.trim() }),
+      });
+      await refetchTenant();
+      toast.success("Workspace name updated!");
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to update workspace name",
+      );
+    } finally {
+      setSavingName(false);
+    }
+  };
+
+  const handleSaveSubdomain = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingSubdomain(true);
     try {
       const result = await api.fetch<SubdomainData>("/settings/subdomain", {
         method: "POST",
@@ -63,28 +89,14 @@ export default function SettingsPage() {
       toast.success("Subdomain saved!");
     } catch (err: unknown) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to save subdomain"
+        err instanceof Error ? err.message : "Failed to save subdomain",
       );
     } finally {
-      setSaving(false);
+      setSavingSubdomain(false);
     }
   };
 
   if (loading) return <p className="text-muted-foreground">Loading...</p>;
-
-  if (user?.plan !== "business") {
-    return (
-      <div className="text-center py-12">
-        <h1 className="text-2xl font-bold mb-4">Settings</h1>
-        <p className="text-muted-foreground mb-4">
-          Custom subdomain requires a Business plan
-        </p>
-        <Button onClick={() => router.push("/dashboard/billing")}>
-          Upgrade to Business
-        </Button>
-      </div>
-    );
-  }
 
   const domainBase = subdomainData?.domain_base || "beforeafter.io";
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -93,48 +105,153 @@ export default function SettingsPage() {
     <div>
       <h1 className="text-2xl font-bold mb-6">Settings</h1>
 
-      <Card className="max-w-xl">
-        <CardHeader>
-          <CardTitle className="text-lg">Custom Subdomain</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSave} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="subdomain">Subdomain</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="subdomain"
-                  placeholder="your-business"
-                  value={subdomain}
-                  onChange={(e) => setSubdomain(e.target.value.toLowerCase())}
-                  className="max-w-[200px]"
-                />
-                <span className="text-muted-foreground">.{domainBase}</span>
+      <div className="space-y-6 max-w-xl">
+        {/* Workspace Name — all plans */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Workspace</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isOwner ? (
+              <form onSubmit={handleSaveName} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="workspace-name">Workspace Name</Label>
+                  <Input
+                    id="workspace-name"
+                    value={workspaceName}
+                    onChange={(e) => setWorkspaceName(e.target.value)}
+                    placeholder="My Business"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  disabled={savingName || !workspaceName.trim()}
+                >
+                  {savingName ? "Saving..." : "Save"}
+                </Button>
+              </form>
+            ) : (
+              <div className="space-y-2">
+                <Label>Workspace Name</Label>
+                <p className="text-sm text-muted-foreground">
+                  {tenant?.name ?? "—"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Only the workspace owner can change the name.
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                3-63 characters, lowercase letters, numbers, and hyphens only
-              </p>
-            </div>
-            <Button type="submit" disabled={saving || !subdomain}>
-              {saving ? "Saving..." : "Save Subdomain"}
-            </Button>
-          </form>
+            )}
+          </CardContent>
+        </Card>
 
-          {subdomainData?.subdomain && (
-            <div className="mt-4 p-3 bg-muted rounded-lg">
-              <p className="text-sm font-medium">Your public page:</p>
-              <a
-                href={`${APP_URL}/p/${subdomainData.subdomain}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-primary underline"
-              >
-                {APP_URL}/p/{subdomainData.subdomain}
-              </a>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {/* Subdomain — Business plan */}
+        {plan === "business" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Custom Subdomain</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isOwner ? (
+                <>
+                  <form onSubmit={handleSaveSubdomain} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="subdomain">Subdomain</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="subdomain"
+                          placeholder="your-business"
+                          value={subdomain}
+                          onChange={(e) =>
+                            setSubdomain(e.target.value.toLowerCase())
+                          }
+                          className="max-w-[200px]"
+                        />
+                        <span className="text-muted-foreground">
+                          .{domainBase}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        3-63 characters, lowercase letters, numbers, and hyphens
+                        only
+                      </p>
+                    </div>
+                    <Button
+                      type="submit"
+                      disabled={savingSubdomain || !subdomain}
+                    >
+                      {savingSubdomain ? "Saving..." : "Save Subdomain"}
+                    </Button>
+                  </form>
+
+                  {subdomainData?.subdomain && (
+                    <div className="mt-4 p-3 bg-muted rounded-lg">
+                      <p className="text-sm font-medium">Your public page:</p>
+                      <a
+                        href={`${APP_URL}/p/${subdomainData.subdomain}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary underline"
+                      >
+                        {APP_URL}/p/{subdomainData.subdomain}
+                      </a>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Subdomain</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {subdomainData?.subdomain
+                      ? `${subdomainData.subdomain}.${domainBase}`
+                      : "Not configured"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Only the workspace owner can change the subdomain.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* API Key — Business plan */}
+        {plan === "business" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">API Key</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {apiKeyData?.api_key ? (
+                <div className="space-y-2">
+                  <Label>Your API Key</Label>
+                  <div className="flex items-center gap-2">
+                    <code className="text-sm bg-muted px-3 py-1.5 rounded font-mono">
+                      {apiKeyData.api_key}
+                    </code>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(apiKeyData.api_key!);
+                        toast.success("Copied to clipboard");
+                      }}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Use this key to access the B4After API programmatically.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No API key generated yet. Contact support to request one.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

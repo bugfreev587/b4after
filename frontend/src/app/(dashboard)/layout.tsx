@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useUser, useClerk } from "@clerk/nextjs";
+import { useUser, useClerk, UserProfile } from "@clerk/nextjs";
 import { buttonVariants } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import { useApiClient } from "@/lib/api";
@@ -20,16 +20,8 @@ import { Badge } from "@/components/ui/badge";
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/dashboard/spaces", label: "Spaces" },
-  { href: "/dashboard/galleries", label: "Galleries" },
+  { href: "/dashboard/spaces", label: "Galleries" },
   { href: "/dashboard/branding", label: "Branding" },
-];
-
-const MANAGEMENT_LINKS = [
-  { href: "/dashboard/reviews", label: "Reviews" },
-  { href: "/dashboard/timelines", label: "Timelines" },
-  { href: "/dashboard/leads", label: "Leads" },
-  { href: "/dashboard/calendar", label: "Content" },
 ];
 
 export default function DashboardLayout({
@@ -52,6 +44,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const api = useApiClient();
   const { tenant, isOwner, plan } = useTenant();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   // Ensure user record exists in DB on every dashboard visit
   useEffect(() => {
@@ -62,7 +55,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       );
   }, [api]);
 
-  const allLinks = [...NAV_LINKS, ...MANAGEMENT_LINKS];
+  const showManagement = isOwner && plan === "business";
 
   const isActive = (href: string) =>
     href === "/dashboard"
@@ -78,10 +71,23 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Clerk UserProfile modal */}
+      {profileOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setProfileOpen(false)}
+          />
+          <div className="relative z-10 max-h-[90vh] overflow-auto rounded-xl">
+            <UserProfile />
+          </div>
+        </div>
+      )}
+
       <header className="sticky top-0 z-50 bg-[#1A1425]/95 backdrop-blur-lg border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-14">
           <div className="flex items-center gap-6">
-            <Logo href="/" size="small" />
+            <Logo href="/dashboard" size="small" />
             <nav className="hidden lg:flex items-center gap-0.5">
               {NAV_LINKS.map((link) => (
                 <Link
@@ -99,31 +105,30 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                   )}
                 </Link>
               ))}
-              {/* Management dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  className={`relative px-3 py-1.5 text-sm font-medium transition outline-none ${
-                    MANAGEMENT_LINKS.some((l) => isActive(l.href))
-                      ? "text-white"
-                      : "text-gray-400 hover:text-white"
-                  }`}
-                >
-                  Management
-                  {MANAGEMENT_LINKS.some((l) => isActive(l.href)) && (
-                    <span className="absolute bottom-0 left-1 right-1 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" />
-                  )}
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  {MANAGEMENT_LINKS.map((link) => (
+              {/* Management dropdown — Business Owner only */}
+              {showManagement && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    className={`relative px-3 py-1.5 text-sm font-medium transition outline-none ${
+                      isActive("/dashboard/members")
+                        ? "text-white"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    Management
+                    {isActive("/dashboard/members") && (
+                      <span className="absolute bottom-0 left-1 right-1 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" />
+                    )}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
                     <DropdownMenuItem
-                      key={link.href}
-                      onClick={() => router.push(link.href)}
+                      onClick={() => router.push("/dashboard/members")}
                     >
-                      {link.label}
+                      Members
                     </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </nav>
           </div>
 
@@ -168,9 +173,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                   </Badge>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => router.push("/dashboard/profile")}
-                >
+                <DropdownMenuItem onClick={() => setProfileOpen(true)}>
                   Profile
                 </DropdownMenuItem>
                 {isOwner && (
@@ -185,7 +188,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 >
                   Settings
                 </DropdownMenuItem>
-                {isOwner && plan === "business" && (
+                {showManagement && (
                   <DropdownMenuItem
                     onClick={() => router.push("/dashboard/members")}
                   >
@@ -242,7 +245,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             onClick={() => setMobileOpen(false)}
           />
           <nav className="absolute left-0 top-0 bottom-0 w-64 bg-[#1A1425] border-r border-white/10 p-4 pt-20 space-y-1">
-            {allLinks.map((link) => (
+            {NAV_LINKS.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -256,6 +259,47 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 {link.label}
               </Link>
             ))}
+            {showManagement && (
+              <Link
+                href="/dashboard/members"
+                onClick={() => setMobileOpen(false)}
+                className={`block px-3 py-2 rounded-md text-sm font-medium transition ${
+                  isActive("/dashboard/members")
+                    ? "bg-white/10 text-white"
+                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                Members
+              </Link>
+            )}
+
+            {/* Separator + utility links */}
+            <div className="border-t border-white/10 my-3" />
+            {isOwner && (
+              <Link
+                href="/dashboard/billing"
+                onClick={() => setMobileOpen(false)}
+                className="block px-3 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition"
+              >
+                Billing
+              </Link>
+            )}
+            <Link
+              href="/dashboard/settings"
+              onClick={() => setMobileOpen(false)}
+              className="block px-3 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition"
+            >
+              Settings
+            </Link>
+            <button
+              onClick={() => {
+                setMobileOpen(false);
+                signOut(() => router.push("/"));
+              }}
+              className="block w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition"
+            >
+              Sign Out
+            </button>
           </nav>
         </div>
       )}
