@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { LandingSlider } from "./landing-slider";
 import { PricingSection } from "./pricing-section";
-import { ShipproofEmbed } from "./shipproof-embed";
 
 const FEATURES = [
   {
@@ -208,13 +207,6 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Shipproof Embed */}
-      <section className="py-20 sm:py-24 bg-white">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6">
-          <ShipproofEmbed />
         </div>
       </section>
 
