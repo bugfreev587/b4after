@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { LandingSlider } from "./landing-slider";
 import { PricingSection } from "./pricing-section";
 
@@ -112,12 +113,12 @@ export default function HomePage() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-            <a
+            <Link
               href="/sign-up"
               className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-7 py-3.5 text-base font-semibold text-white hover:bg-blue-700 transition-colors"
             >
               Get Started Free
-            </a>
+            </Link>
             <a
               href="#how-it-works"
               className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-gray-50 px-7 py-3.5 text-base font-semibold text-gray-900 hover:bg-gray-100 transition-colors"
@@ -245,12 +246,12 @@ export default function HomePage() {
             clients with visual proof.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
+            <Link
               href="/sign-up"
               className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-8 py-4 text-base font-semibold text-white hover:bg-blue-700 transition-colors"
             >
               Get Started Free
-            </a>
+            </Link>
             <a
               href="#how-it-works"
               className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-8 py-4 text-base font-semibold text-gray-900 hover:bg-gray-100 transition-colors"
