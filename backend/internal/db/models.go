@@ -939,6 +939,7 @@ type Analytic struct {
 	Referrer     pgtype.Text        `json:"referrer"`
 	Country      pgtype.Text        `json:"country"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	ClerkUserID  pgtype.Text        `json:"clerk_user_id"`
 }
 
 type Brand struct {

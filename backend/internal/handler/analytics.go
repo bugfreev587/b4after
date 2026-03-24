@@ -27,6 +27,7 @@ type recordEventRequest struct {
 	Device       string `json:"device"`
 	Referrer     string `json:"referrer"`
 	Country      string `json:"country"`
+	ClerkUserID  string `json:"clerk_user_id"`
 }
 
 func (h *AnalyticsHandler) RecordEvent(w http.ResponseWriter, r *http.Request) {
@@ -48,6 +49,7 @@ func (h *AnalyticsHandler) RecordEvent(w http.ResponseWriter, r *http.Request) {
 		Device:       db.NullDeviceType{DeviceType: db.DeviceType(req.Device), Valid: req.Device != ""},
 		Referrer:     pgtype.Text{String: req.Referrer, Valid: req.Referrer != ""},
 		Country:      pgtype.Text{String: req.Country, Valid: req.Country != ""},
+		ClerkUserID:  pgtype.Text{String: req.ClerkUserID, Valid: req.ClerkUserID != ""},
 	})
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to record event")

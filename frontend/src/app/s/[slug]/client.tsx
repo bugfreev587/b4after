@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import { BeforeAfterSlider } from "@/components/before-after-slider";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -22,6 +23,8 @@ export function PublicComparisonClient({
 }: {
   comparison: Comparison;
 }) {
+  const { userId } = useAuth();
+
   const recordEvent = (eventType: string) => {
     fetch(`${API_URL}/analytics/events`, {
       method: "POST",
@@ -29,6 +32,7 @@ export function PublicComparisonClient({
       body: JSON.stringify({
         comparison_id: comp.id,
         event_type: eventType,
+        clerk_user_id: userId || undefined,
       }),
     }).catch(() => {});
   };
